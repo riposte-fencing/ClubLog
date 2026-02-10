@@ -1,0 +1,133 @@
+﻿@page "/"
+@using ClubLog.Blazor.Common.Utils
+@using ClubLog.Blazor.Simple.BrowserRepositories
+@using ClubLog.Core.Interfaces
+@using ClubLog.Core.Models
+@using ClubLog.Core.Utils
+
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+@inject IPoolService PoolService
+
+@inject HttpClient Http
+@inject NavigationManager Nav
+@inject PoolRepository PoolRepo
+@inject FencerRepository FencerRepo
+
+<MudContainer>
+    <MudGrid>
+        <MudItem>
+            <MudTextField @bind-Value="_eventName" Label="Event Name"/>
+        </MudItem>
+        <MudItem>
+            <MudButton Variant="Variant.Filled" Color="Color.Success">Save</MudButton>
+        </MudItem> 
+        <MudItem>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="OpenFencerDialog">
+                Add Fencer
+            </MudButton>
+        </MudItem>
+        <MudItem>
+            <MudFileUpload T="IBrowserFile" FilesChanged="ProcessCsv">
+                <ActivatorContent>
+                    <MudButton Variant="Variant.Filled"
+                               Color="Color.Primary"
+                               StartIcon="@Icons.Material.Filled.CloudUpload">
+                        Upload Files
+                    </MudButton>
+                </ActivatorContent>
+            </MudFileUpload>
+        </MudItem>
+        <MudItem>
+            <MudButton Variant="Variant.Filled" Color="Color.Success" OnClick="OpenPoolNumberDialog">
+                Start pools
+            </MudButton>
+        </MudItem>
+    </MudGrid>
+
+    <br/>
+
+    <SimpleFencerTable Fencers="_fencers" ShowPlace="true"/>
+
+</MudContainer>
+
+@code {
+    private string _eventName = string.Empty;
+    private List<FencerBase> _fencers = new();
+
+    public async Task OpenPoolNumberDialog()
+    {
+        var poolPermutations = StaticMethods.GeneratePoolsSizes(_fencers.Count);
+        if (poolPermutations.Count == 0)
+        {
+            Snackbar.Add("Not enough fencers added.", Severity.Error);
+            return;
+        }
+        
+        var parameters = new DialogParameters
+        {
+            { "Permutations", poolPermutations },
+            { "StartPools", EventCallback.Factory.Create<List<Pool>>(this, StartPools) }
+        };
+        
+        await DialogService.ShowAsync<PoolPermutationDialog>("Pool options", parameters);
+    }
+    
+    public async Task OpenFencerDialog()
+    {
+        var parameters = new DialogParameters
+        {
+            { "OnSaved", EventCallback.Factory.Create<FencerBase>(this, AddFencer) }
+        };
+
+        var dialog = await DialogService.ShowAsync<CreateFencerDialog>("Create a fencer", parameters);
+        var result = await dialog.Result;
+
+        if (result is { Canceled: false, Data: not null })
+        {
+            var fencer = (FencerBase)result.Data;
+
+            if (!string.IsNullOrWhiteSpace(fencer.FirstName) &&
+                !string.IsNullOrWhiteSpace(fencer.LastName))
+            {
+                await AddFencer(fencer);
+            }
+        }
+    }
+
+    public async Task ProcessCsv(IBrowserFile file)
+    {
+        var fencers = await CsvUtil.ImportFencersFromBrowserCsvFile(file);
+        _fencers.AddRange(fencers);
+        StateHasChanged();
+    }
+
+    private async Task AddFencer(FencerBase fencer)
+    {
+        _fencers.Add(fencer);
+        await FencerRepo.AddFencerAsync(fencer, _eventName);
+        StateHasChanged();
+    }
+
+    private async Task StartPools(List<Pool> pools)
+    {
+        if (string.IsNullOrWhiteSpace(_eventName))
+        {
+            Snackbar.Add("Event name cannot be empty!", Severity.Error);
+            return;
+        }
+
+        var orders = await DataGrabber.Grab<Dictionary<int, List<BoutPair>>>(Http, "bout_order.json", true);
+        
+        var fencerList = StaticMethods.SnakeFencerList(_fencers, pools.Count);
+        StaticMethods.PopulatePools(fencerList, pools);
+        foreach (var p in pools)
+        {
+            PoolService.CreateBoutsForPool(p, orders);
+        }
+        
+        await PoolRepo.InsertPools(pools, string.IsNullOrWhiteSpace(_eventName) ? "Untitled Event" : _eventName);
+        Nav.NavigateTo($"pools/{_eventName}");
+    }
+
+}

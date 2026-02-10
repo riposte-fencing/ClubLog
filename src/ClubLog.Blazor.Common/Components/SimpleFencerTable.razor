@@ -1,0 +1,77 @@
+﻿@using ClubLog.Core.Models
+<MudSimpleTable Style="overflow-x: auto; width:100%;">
+    <thead>
+    <tr>
+        <th>#</th>
+        <th>Name</th>
+        <th>Club</th>
+        <th>Order</th>
+        <th>Delete</th>
+    </tr>
+    </thead>
+    <tbody>
+    @for (var index = 0; index < Fencers.Count; index++)
+    {
+        var i = index;
+        var fencer = Fencers[i];
+
+        <tr>
+            <td>@(i + 1)</td>
+
+            <td>@($"{fencer.FirstName} {fencer.LastName}")</td>
+
+            <td>@fencer.ClubName</td>
+
+            <td>
+                <MudIconButton Icon="@Icons.Material.Filled.KeyboardArrowUp"
+                               Disabled="@(i == 0)"
+                               OnClick="@(() => MoveUp(i))"/>
+                <MudIconButton Icon="@Icons.Material.Filled.KeyboardArrowDown"
+                               Disabled="@(i == Fencers.Count - 1)"
+                               OnClick="@(() => MoveDown(i))"/>
+            </td>
+
+            <td>
+                <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                               Color="Color.Error"
+                               OnClick="@(() => DeleteFencer(i))"/>
+            </td>
+        </tr>
+    }
+    </tbody>
+</MudSimpleTable>
+
+@code {
+    [Parameter] public List<FencerBase> Fencers { get; set; }
+    [Parameter] public bool ShowPlace { get; set; } = true;
+    [Parameter] public bool AllowReorder { get; set; } = false;
+    
+    private void DeleteFencer(int index)
+    {
+        if (index < 0 || index >= Fencers.Count)
+            return;
+
+        Fencers.RemoveAt(index);
+        StateHasChanged();
+    }
+
+    private void MoveUp(int index)
+    {
+        if (index <= 0 || index >= Fencers.Count)
+            return;
+
+        (Fencers[index - 1], Fencers[index]) = (Fencers[index], Fencers[index - 1]);
+
+        StateHasChanged();
+    }
+
+    private void MoveDown(int index)
+    {
+        if (index < 0 || index >= Fencers.Count - 1)
+            return;
+
+        (Fencers[index + 1], Fencers[index]) = (Fencers[index], Fencers[index + 1]);
+
+        StateHasChanged();
+    }
+}

@@ -1,0 +1,105 @@
+﻿@using ClubLog.Core.Utils
+
+<MudPaper Class="custom-paper d-flex center-content">
+    <table>
+        <thead>
+        <tr>
+            <td class="right-text">
+                <MudText Typo="Typo.subtitle2">Fencers</MudText>
+            </td>
+            @for (var i = 1; i <= Pool.Fencers.Count; i++)
+            {
+                // Yep, we have to do this. Yes, it's goofy.
+                var x = i;
+                <td class="center-text">
+                    <MudText Typo="Typo.subtitle2">@x</MudText>
+                </td>
+            }
+            <td class="center-text">
+                <MudText Typo="Typo.subtitle2">V/M</MudText>
+            </td>
+            <td class="center-text">
+                <MudText Typo="Typo.subtitle2">TS</MudText>
+            </td>
+            <td class="center-text">
+                <MudText Typo="Typo.subtitle2">TR</MudText>
+            </td>
+            <td class="center-text">
+                <MudText Typo="Typo.subtitle2">I</MudText>
+            </td>
+        </tr>
+        </thead>
+        <tbody>
+        @for (var i = 0; i < Pool.Fencers.Count; i++)
+        {
+            // Yep, we have to do this. Yes, it's goofy.
+            var x = i + 1;
+            var fencer = Pool.Fencers[i];
+            fencer.Stats = Pool.Bouts.GetStatsForFencer(fencer.Id);
+
+            <tr>
+                <td class="name-box right-text">
+                    <MudText Typo="Typo.subtitle2">@($"{fencer}: {x}")</MudText>
+                </td>
+                @for (var j = 1; j <= Pool.Fencers.Count; j++)
+                {
+                    @if (i == j - 1)
+                    {
+                        <td class="square black"/>
+                    }
+                    else
+                    {
+                        var opponent = Pool.Fencers[j - 1];
+                        var bout = Pool.Bouts.FirstOrDefault(x => (x.RightId == fencer.Id && x.LeftId == opponent.Id) || (x.LeftId == fencer.Id && x.RightId == opponent.Id));
+                        if (bout is null) throw new ArgumentException("This should never happen");
+                        var right = fencer.Id == bout.RightId;
+
+                        var value = right ? bout.RightScore : bout.LeftScore;
+                        <td>
+                            <MudInput
+                                class="center-text square"
+                                T="int?"
+                                Value="value"
+                                ValueChanged="async v => await UpdateBout(bout, v, right)"
+                                Immediate="true"/>
+                        </td>
+                    }
+                }
+                <td class="center-text square">
+                    <MudText Typo="Typo.subtitle2">@fencer.Stats.Victories</MudText>
+                </td>
+                <td class="center-text square">
+                    <MudText Typo="Typo.subtitle2">@fencer.Stats.TouchesScored</MudText>
+                </td>
+                <td class="center-text square">
+                    <MudText Typo="Typo.subtitle2">@fencer.Stats.TouchesReceived</MudText>
+                </td>
+                <td class="center-text square">
+                    <MudText Typo="Typo.subtitle2">@fencer.Stats.Indicator</MudText>
+                </td>
+            </tr>
+        }
+        </tbody>
+    </table>
+</MudPaper>
+
+@code {
+
+    [Parameter] public required Pool Pool { get; set; }
+    [Parameter] public EventCallback<Pool> OnUpdate { get; set; }
+
+    public async Task UpdateBout(BoutBase bout, int? score, bool right)
+    {
+        if (right)
+        {
+            bout.RightScore = score ?? 0;
+        }   
+        else
+        {
+            bout.LeftScore = score ?? 0;
+        }
+
+        await OnUpdate.InvokeAsync(Pool);
+    }
+
+}

@@ -1,0 +1,70 @@
+﻿@using ClubLog.Core.Models
+@using ClubLog.Core.Utils
+
+<MudDialog>
+    <DialogContent>
+        <MudText>
+            Selected: @(Pools.ToPermutationString())
+        </MudText>
+        <br/>
+        <MudPaper Class="custom-paper">
+            <MudList T="List<Pool>"
+                     @bind-SelectedValue="Pools"
+                     SelectionMode="SelectionMode.SingleSelection"
+                     Color="@Color.Info">
+
+                @for (var i = 0; i < Permutations.Count; i++)
+                {
+                    var p = Permutations[i];
+
+                    if (i == 0)
+                    {
+                        <div class="recommended-wrapper">
+                            <div class="recommended-label">Recommended</div>
+
+                            <MudListItem Value="p"
+                                         Text="@p.ToPermutationString()"/>
+                        </div>
+                    }
+                    else
+                    {
+                        <MudListItem Value="p"
+                                     Text="@p.ToPermutationString()"/>
+                    }
+                }
+            </MudList>
+        </MudPaper>
+    </DialogContent>
+
+    <DialogActions>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Start">Start</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Secondary" OnClick="Cancel">Cancel</MudButton>
+    </DialogActions>
+</MudDialog>
+
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; }
+    [Parameter] public required List<List<Pool>> Permutations { get; set; }
+    [Parameter] public required EventCallback<List<Pool>> StartPools { get; set; }
+    
+    private List<Pool> Pools { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var p = Permutations.FirstOrDefault();
+        Pools = p ?? throw new Exception("Oops");
+    }
+    
+    public async Task Start()
+    {
+        await StartPools.InvokeAsync(Pools);
+        StateHasChanged();
+    }
+
+    public void Cancel()
+    {
+        MudDialog.Close();
+    }
+
+}

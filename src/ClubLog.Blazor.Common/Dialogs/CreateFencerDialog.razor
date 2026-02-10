@@ -1,0 +1,68 @@
+﻿@using ClubLog.Core.Models
+
+<MudDialog>
+    <DialogContent>
+        <MudText Typo="Typo.h6" Class="mb-3">Basic info</MudText>
+
+        <MudGrid>
+            <MudItem xs="12" md="4">
+                <MudTextField @bind-Value="_fencer.FirstName" Label="First name"/>
+            </MudItem>
+            <MudItem xs="12" md="4">
+                <MudTextField @bind-Value="_fencer.LastName" Label="Last name"/>
+            </MudItem>
+            <MudItem xs="12" md="4">
+                <MudTextField @bind-Value="_fencer.ClubName" Label="Club"/>
+            </MudItem>
+        </MudGrid>
+
+        <br/>
+
+        <MudText Typo="Typo.h6" Class="mb-3">Rating info</MudText>
+
+        <MudGrid>
+            <MudItem xs="12" md="4">
+                <MudTextField @bind-Value="_fencer.EpeeRating" Label="Epee rating"/>
+            </MudItem>
+            <MudItem xs="12" md="4">
+                <MudTextField @bind-Value="_fencer.FoilRating" Label="Foil rating"/>
+            </MudItem>
+            <MudItem xs="12" md="4">
+                <MudTextField @bind-Value="_fencer.SaberRating" Label="Saber rating"/>
+            </MudItem>
+        </MudGrid>
+    </DialogContent>
+
+    <DialogActions>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Save">Save and create another</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Submit">Save and close</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Secondary" OnClick="Cancel">Cancel</MudButton>
+    </DialogActions>
+</MudDialog>
+
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; }
+    [Parameter] public EventCallback<FencerBase> OnSaved { get; set; }
+
+    private FencerBase _fencer = new();
+
+    public async Task Save()
+    {
+        await OnSaved.InvokeAsync(_fencer);
+        _fencer = new();
+        StateHasChanged();
+    }
+    
+    public async Task Submit()
+    {
+        await Save();
+        MudDialog.Close(DialogResult.Ok(_fencer));
+    }
+
+    public void Cancel()
+    {
+        MudDialog.Close();
+    }
+
+}

@@ -1,0 +1,28 @@
+﻿@inherits LayoutComponentBase
+
+<MudThemeProvider IsDarkMode="true"/>
+<MudPopoverProvider/>
+<MudDialogProvider MaxWidth="MaxWidth.Small" FullWidth="true"/>
+<MudSnackbarProvider/>
+
+<MudLayout>
+    @if (!_alertDismissed)
+    {
+        
+        <MudAlert Class="mx-auto mt-4" Style="width:75%;" 
+                  Severity="Severity.Warning" 
+                  Variant="Variant.Outlined" 
+                  ShowCloseIcon="true" 
+                  CloseIconClicked="() => _alertDismissed = true">
+            This version of Riposte uses browser storage. Anything saved on another device will not be available here!
+        </MudAlert>
+    }
+    <MudMainContent>
+        @Body
+    </MudMainContent>
+</MudLayout>
+
+@code
+{
+    private bool _alertDismissed = false;
+}
