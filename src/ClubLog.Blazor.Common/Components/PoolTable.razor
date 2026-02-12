@@ -74,10 +74,11 @@
 
                         var value = right ? bout.RightScore : bout.LeftScore;
                         var isComplete = bout.LeftScore is not null && bout.RightScore is not null;
-                        var scoreClass = isComplete && bout.WinnerId == fencer.Id ? "score-winner"
-                            : isComplete && bout.WinnerId is not null ? "score-loser"
-                            : isComplete && bout.WinnerId is null ? "score-problem"
-                            : "";
+                        // Claude made this nasty ternary...
+                        var scoreClass = isComplete && bout.WinnerId == fencer.Id 
+                            ? "score-winner" : isComplete && bout.WinnerId is not null 
+                                ? "score-loser" : isComplete && bout.WinnerId is null 
+                                    ? "score-problem" : "";
 
                         <td>
                             <div class="score-indicator @scoreClass">

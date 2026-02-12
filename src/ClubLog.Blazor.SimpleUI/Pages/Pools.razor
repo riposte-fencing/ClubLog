@@ -1,9 +1,11 @@
 ﻿@page "/pools/{EventName}"
 @using ClubLog.Blazor.Simple.BrowserRepositories
+@using ClubLog.Core.Interfaces
 @using ClubLog.Core.Models
 @using ClubLog.Core.Utils
 
 @inject PoolRepository PoolRepo
+@inject IElimService ElimService
 
 @if (_pools.Count > 0)
 {
@@ -25,7 +27,8 @@
             Color="Color.Success"
             Variant="Variant.Filled"
             Size="Size.Large"
-            Disabled="!_pools.AllPoolsFinished()">
+            Disabled="!_pools.AllPoolsFinished()"
+            OnClick="Finish">
             Finish pools
         </MudButton>
     </div>
@@ -48,4 +51,10 @@
     {
         await PoolRepo.UpdatePool(pool);
     }
+
+    private async Task Finish()
+    {
+        var x = ElimService.GetElimResults(_pools);
+    }
+
 }

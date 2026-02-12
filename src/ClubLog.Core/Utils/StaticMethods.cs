@@ -50,7 +50,7 @@ public static class StaticMethods
         for (var i = 0; i < fencers.Count; i++)
         {
             var pool = pools[i % numPools];
-            pool.Fencers.Add(new PoolFencer(fencers[i], pool.Fencers.Count - 1));
+            pool.Fencers.Add(new FencerWithStats(fencers[i], pool.Fencers.Count - 1));
         }
     }
 

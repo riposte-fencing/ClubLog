@@ -60,4 +60,17 @@ public static class ExtensionMethods
     {
         return pools.All(x => x.Finished);
     }
-}
+
+    public static int CompareTo(this FencerWithStats original, FencerWithStats other, Random rand)
+    {
+        if (original.Stats.Vm > other.Stats.Vm) return 1;
+        if (original.Stats.Vm < other.Stats.Vm) return -1;
+        if (original.Stats.Indicator > other.Stats.Indicator) return 1;
+        if (original.Stats.Indicator < other.Stats.Indicator) return -1;
+        if (original.Stats.TouchesScored > other.Stats.TouchesScored) return 1;
+        if (original.Stats.TouchesScored < other.Stats.TouchesScored) return -1;
+        original.Tied = true;
+        other.Tied = true;
+        return new[] { -1, 1 }[rand.Next(2)];
+    }
+ }

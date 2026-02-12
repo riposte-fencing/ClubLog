@@ -16,6 +16,7 @@ builder.Services.AddBlazoredLocalStorage();
 builder.Services.AddScoped<FencerRepository>();
 builder.Services.AddScoped<PoolRepository>();
 builder.Services.AddSingleton<IPoolService, PoolService>();
+builder.Services.AddSingleton<IElimService, ElimService>();
 
 builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
 

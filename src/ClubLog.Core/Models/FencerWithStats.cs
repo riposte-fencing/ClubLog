@@ -1,11 +1,11 @@
 ﻿namespace ClubLog.Core.Models;
 
-public class PoolFencer : FencerBase
+public class FencerWithStats : FencerBase
 {
     // Empty constructor to make System.Text.Json happy. 
-    public PoolFencer() { }
+    public FencerWithStats() { }
     
-    public PoolFencer(FencerBase fencer, int opponentCount)
+    public FencerWithStats(FencerBase fencer, int opponentCount)
     {
         Id = fencer.Id;
         FirstName = fencer.FirstName;
@@ -19,4 +19,7 @@ public class PoolFencer : FencerBase
     }
 
     public PoolStats Stats { get; set; } = new();
+    public int FinalPlace { get; set; }
+    public string FinalPlaceStr { get; set; }
+    public bool Tied { get; set; } = false;
 }
