@@ -55,4 +55,9 @@ public static class ExtensionMethods
         
         return stats;
     }
+
+    public static bool AllPoolsFinished(this IEnumerable<Pool> pools)
+    {
+        return pools.All(x => x.Finished);
+    }
 }

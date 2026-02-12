@@ -9,5 +9,12 @@ public class Pool
     public List<PoolFencer> Fencers { get; set; } = new();
     public List<BoutBase> Bouts { get; set; } = new();
     public Dictionary<Guid, List<BoutBase>> BoutsForFencers { get; set; } = new();
-    public bool Finished { get; set; } = false;
+
+    public bool Finished
+    {
+        get
+        {
+            return Bouts.All(x => x.WinnerId is not null);
+        }
+    }
 }

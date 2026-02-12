@@ -1,4 +1,20 @@
-﻿@using ClubLog.Core.Utils
+﻿@using ClubLog.Blazor.Common.Dialogs
+@using ClubLog.Core.Utils
+
+@inject IDialogService DialogService
+
+<div class="d-flex justify-content-center fix-problems-container">
+    @if (_problems.Any())
+    {
+        <MudButton
+            Variant="Variant.Outlined"
+            StartIcon="@Icons.Material.Filled.Warning"
+            Color="Color.Warning"
+            OnClick="OpenProblemDialog">
+            Fix problems
+        </MudButton>
+    }
+</div>
 
 <MudPaper Class="custom-paper d-flex center-content">
     <table>
@@ -36,7 +52,7 @@
             var x = i + 1;
             var fencer = Pool.Fencers[i];
             fencer.Stats = Pool.Bouts.GetStatsForFencer(fencer.Id);
-
+            
             <tr>
                 <td class="name-box right-text">
                     <MudText Typo="Typo.subtitle2">@($"{fencer}: {x}")</MudText>
@@ -53,15 +69,25 @@
                         var bout = Pool.Bouts.FirstOrDefault(x => (x.RightId == fencer.Id && x.LeftId == opponent.Id) || (x.LeftId == fencer.Id && x.RightId == opponent.Id));
                         if (bout is null) throw new ArgumentException("This should never happen");
                         var right = fencer.Id == bout.RightId;
+                        var rightFencer = right ? fencer : opponent;
+                        var leftFencer = right ? opponent : fencer;
 
                         var value = right ? bout.RightScore : bout.LeftScore;
+                        var isComplete = bout.LeftScore is not null && bout.RightScore is not null;
+                        var scoreClass = isComplete && bout.WinnerId == fencer.Id ? "score-winner"
+                            : isComplete && bout.WinnerId is not null ? "score-loser"
+                            : isComplete && bout.WinnerId is null ? "score-problem"
+                            : "";
+
                         <td>
-                            <MudInput
-                                class="center-text square"
-                                T="int?"
-                                Value="value"
-                                ValueChanged="async v => await UpdateBout(bout, v, right)"
-                                Immediate="true"/>
+                            <div class="score-indicator @scoreClass">
+                                <MudInput
+                                    class="center-text square"
+                                    T="int?"
+                                    Value="value"
+                                    ValueChanged="async v => await UpdateBout(bout, v, right, leftFencer, rightFencer)"
+                                    Immediate="true"/>
+                            </div>
                         </td>
                     }
                 }
@@ -88,17 +114,63 @@
     [Parameter] public required Pool Pool { get; set; }
     [Parameter] public EventCallback<Pool> OnUpdate { get; set; }
 
-    public async Task UpdateBout(BoutBase bout, int? score, bool right)
+    private List<DetailedBout> _problems { get; set; } = new();
+
+    protected override void OnParametersSet()
     {
-        if (right)
+        _problems = Pool.Bouts
+            .Where(b => b.LeftScore is not null && b.RightScore is not null && b.LeftScore == b.RightScore && b.WinnerId is null)
+            .Select(b => new DetailedBout(
+                b,
+                Pool.Fencers.First(f => f.Id == b.LeftId),
+                Pool.Fencers.First(f => f.Id == b.RightId)))
+            .ToList();
+    }
+
+    public async Task UpdateBout(BoutBase bout, int? score, bool isRight, FencerBase left, FencerBase right)
+    {
+        if (isRight)
         {
             bout.RightScore = score ?? 0;
-        }   
+        }
         else
         {
             bout.LeftScore = score ?? 0;
         }
 
+        bout.WinnerId = null;
+        _problems.RemoveAll(p => p.BoutId == bout.BoutId);
+
+        if (bout.RightScore is not null && bout.LeftScore is not null && bout.RightScore == bout.LeftScore)
+        {
+            _problems.Add(new DetailedBout(bout, left, right));
+        }
+
+        await OnUpdate.InvokeAsync(Pool);
+    }
+
+    private async Task OpenProblemDialog()
+    {
+        var parameters = new DialogParameters
+        {
+            { "ProblemBouts", _problems },
+            { "FixBouts", EventCallback.Factory.Create<List<DetailedBout>>(this, Fix) }
+        };
+        await DialogService.ShowAsync<ProblemBoutDialog>(string.Empty, parameters);
+    }
+
+    private async Task Fix(List<DetailedBout> bouts)
+    {
+        foreach (var detailedBout in bouts)
+        {
+            var bout = Pool.Bouts.FirstOrDefault(b => b.BoutId == detailedBout.BoutId);
+            if (bout is not null && detailedBout.WinnerId is not null)
+            {
+                bout.SetWinner(detailedBout.WinnerId.Value);
+            }
+        }
+
+        _problems.Clear();
         await OnUpdate.InvokeAsync(Pool);
     }
 

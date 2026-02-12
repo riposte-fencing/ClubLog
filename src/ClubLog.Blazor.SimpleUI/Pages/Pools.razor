@@ -1,12 +1,17 @@
 ﻿@page "/pools/{EventName}"
 @using ClubLog.Blazor.Simple.BrowserRepositories
 @using ClubLog.Core.Models
+@using ClubLog.Core.Utils
 
 @inject PoolRepository PoolRepo
 
 @if (_pools.Count > 0)
 {
-    <MudPagination Color="Color.Primary" Count=@_pools.Count @bind-Selected="@_selected"/>
+    <div class="d-flex justify-content-center">
+        <MudText Typo="Typo.h6">Pool selection</MudText>
+        <MudPagination Color="Color.Primary" Count=@_pools.Count @bind-Selected="@_selected"/>
+    </div>
+    <br/>
     <MudContainer MaxWidth="MaxWidth.Medium">
         <PoolTable
             @key="_pools[_selected - 1].PoolId" 
@@ -14,6 +19,16 @@
             OnUpdate="UpdatePool"
         />
     </MudContainer>
+    <br/>
+    <div class="d-flex justify-content-center">
+        <MudButton
+            Color="Color.Success"
+            Variant="Variant.Filled"
+            Size="Size.Large"
+            Disabled="!_pools.AllPoolsFinished()">
+            Finish pools
+        </MudButton>
+    </div>
 }
 
 @code {
@@ -23,7 +38,6 @@
     private int _selected = 1;
     private List<Pool> _pools = new();
     
-
     protected override async Task OnInitializedAsync()
     {
         _pools = await PoolRepo.GetPoolsForEvent(EventName);

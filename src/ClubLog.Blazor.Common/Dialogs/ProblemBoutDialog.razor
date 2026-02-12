@@ -1,0 +1,60 @@
+﻿<MudDialog>
+    <DialogContent>
+        <MudText Typo="Typo.h6">Please resolve the following bouts:</MudText>
+        <br/>
+        @foreach (var b in ProblemBouts)
+        {
+            <div class="d-flex align-center gap-2 mb-2">
+                <MudText>@b</MudText>
+                <MudButton
+                    OnClick="() => SelectWinner(b, b.LeftId)"
+                    Color="@(IsSelected(b, b.LeftId) ? Color.Success : Color.Primary)"
+                    Variant="@(IsSelected(b, b.LeftId) ? Variant.Filled : Variant.Outlined)">
+                    @b.Left
+                </MudButton>
+                <MudButton
+                    OnClick="() => SelectWinner(b, b.RightId)"
+                    Color="@(IsSelected(b, b.RightId) ? Color.Success : Color.Primary)"
+                    Variant="@(IsSelected(b, b.RightId) ? Variant.Filled : Variant.Outlined)">
+                    @b.Right
+                </MudButton>
+            </div>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton
+            OnClick="Finish"
+            Color="Color.Primary"
+            Variant="Variant.Filled"
+            Disabled="@(!AllResolved)">
+            Finish
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; }
+    [Parameter] public required List<DetailedBout> ProblemBouts { get; set; }
+    [Parameter] public required EventCallback<List<DetailedBout>> FixBouts { get; set; }
+
+    private Dictionary<Guid, Guid> _selectedWinners = new();
+
+    private bool AllResolved => ProblemBouts.All(b => _selectedWinners.ContainsKey(b.BoutId));
+
+    private bool IsSelected(DetailedBout bout, Guid fencerId)
+    {
+        return _selectedWinners.TryGetValue(bout.BoutId, out var winnerId) && winnerId == fencerId;
+    }
+
+    private void SelectWinner(DetailedBout bout, Guid winnerId)
+    {
+        _selectedWinners[bout.BoutId] = winnerId;
+        bout.SetWinner(winnerId);
+    }
+
+    private async Task Finish()
+    {
+        await FixBouts.InvokeAsync(ProblemBouts);
+        MudDialog.Close();
+    }
+}
