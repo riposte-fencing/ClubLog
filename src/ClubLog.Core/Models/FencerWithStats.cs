@@ -19,7 +19,12 @@ public class FencerWithStats : FencerBase
     }
 
     public PoolStats Stats { get; set; } = new();
-    public int FinalPlace { get; set; }
-    public string FinalPlaceStr { get; set; }
+    public int Place { get; set; }
+    public string PlaceStr { get; set; }
     public bool Tied { get; set; } = false;
+
+    public override string ToString()
+    {
+        return $"{(string.IsNullOrWhiteSpace(PlaceStr) ? string.Empty : $"{PlaceStr}: ")}{FirstName} {LastName}";
+    }
 }

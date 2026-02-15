@@ -6,6 +6,7 @@
 
 @inject PoolRepository PoolRepo
 @inject IElimService ElimService
+@inject IDialogService DialogService
 
 @if (_pools.Count > 0)
 {
@@ -54,7 +55,13 @@
 
     private async Task Finish()
     {
-        var x = ElimService.GetElimResults(_pools);
+        var results = ElimService.GetElimResults(_pools);
+        
+        var parameters = new DialogParameters
+        {
+            { "Results", results },
+        };
+        await DialogService.ShowAsync<ResultsDialog>("Pool Results", parameters);
     }
 
 }

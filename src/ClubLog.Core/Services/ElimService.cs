@@ -19,8 +19,8 @@ public class ElimService : IElimService
 
         for (var i = 0; i < fencers.Count; i++)
         {
-            fencers[i].FinalPlace = i + 1;
-            fencers[i].FinalPlaceStr = fencers[i].Tied ? $"T{i + 1}" : $"{i + 1}";
+            fencers[i].Place = i + 1;
+            fencers[i].PlaceStr = fencers[i].Tied ? $"T{i + 1}" : $"{i + 1}";
         }
 
         return fencers;

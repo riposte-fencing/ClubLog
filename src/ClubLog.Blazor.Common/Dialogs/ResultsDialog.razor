@@ -1,0 +1,28 @@
+﻿<MudDialog>
+    <DialogContent>
+        <MudPaper class="custom-paper" Style="max-height: 400px; overflow-y: auto;" Elevation="0">
+            <MudList T="FencerWithStats" Dense="true">
+                @foreach (var fencer in Results)
+                {
+                    <MudListItem>
+                        <MudText>
+                            <MudText Typo="Typo.body2" Class="d-inline ml-2" Style="opacity: 0.7;">
+                                @fencer
+                            </MudText>
+                        </MudText>
+                    </MudListItem>
+                }
+            </MudList>
+        </MudPaper>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Close">Close</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; }
+    [Parameter] public required List<FencerWithStats> Results { get; set; }
+
+    private void Close() => MudDialog.Close();
+}
