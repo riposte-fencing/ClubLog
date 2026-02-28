@@ -1,0 +1,38 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy-to-github-pages:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup .NET SDK
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '9.0.x'
+
+    - name: Install wasm-tools workload
+      run: dotnet workload install wasm-tools
+
+    - name: Publish Blazor project
+      run: dotnet publish src/ClubLog.Blazor.SimpleUI/ClubLog.Blazor.SimpleUI.csproj -c Release -o release --nologo
+
+    - name: Change base-tag in index.html from / to /ClubLog/
+      run: sed -i 's/<base href="\/" \/>/<base href="\/ClubLog\/" \/>/g' release/wwwroot/index.html
+
+    - name: Copy index.html to 404.html
+      run: cp release/wwwroot/index.html release/wwwroot/404.html
+
+    - name: Add .nojekyll file
+      run: touch release/wwwroot/.nojekyll
+
+    - name: Deploy to GitHub Pages
+      uses: JamesIves/github-pages-deploy-action@v4
+      with:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        BRANCH: gh-pages
+        FOLDER: release/wwwroot
