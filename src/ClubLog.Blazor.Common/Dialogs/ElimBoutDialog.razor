@@ -1,0 +1,85 @@
+<MudDialog>
+    <DialogContent>
+        <div class="d-flex flex-column" style="gap: 4px;">
+
+            <div class="d-flex align-center" style="gap: 8px;">
+                <MudCheckBox T="bool"
+                             Value="ComputedWinnerId == Bout.RightId"
+                             ValueChanged="v => _manualWinnerId = v ? Bout.RightId : Guid.Empty"
+                             Disabled="!IsTied"
+                             Dense="true" Class="ma-0"/>
+                <MudText Typo="Typo.caption" Style="min-width: 20px; text-align: right; opacity: 0.6;">@Bout.RightPlace</MudText>
+                <MudText Typo="Typo.body1" Style="flex: 1;">@Bout.Right</MudText>
+                <MudNumericField T="int?" @bind-Value="_rightScore" Min="0" Style="width: 70px;" Immediate="true" HideSpinButtons="true"/>
+            </div>
+
+            <MudDivider/>
+
+            <div class="d-flex align-center" style="gap: 8px;">
+                <MudCheckBox T="bool"
+                             Value="ComputedWinnerId == Bout.LeftId"
+                             ValueChanged="v => _manualWinnerId = v ? Bout.LeftId : Guid.Empty"
+                             Disabled="!IsTied"
+                             Dense="true" Class="ma-0"/>
+                <MudText Typo="Typo.caption" Style="min-width: 20px; text-align: right; opacity: 0.6;">@Bout.LeftPlace</MudText>
+                <MudText Typo="Typo.body1" Style="flex: 1;">@Bout.Left</MudText>
+                <MudNumericField T="int?" @bind-Value="_leftScore" Min="0" Style="width: 70px;" Immediate="true" HideSpinButtons="true"/>
+            </div>
+
+            @if (IsTied)
+            {
+                <MudText Typo="Typo.caption" Color="Color.Warning" Class="mt-1">Scores are tied — check the winner above.</MudText>
+            }
+
+        </div>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Save" Disabled="!CanSave">Save</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; }
+    [Parameter] public required ElimBout Bout { get; set; }
+
+    private int? _rightScore;
+    private int? _leftScore;
+    private Guid _manualWinnerId = Guid.Empty;
+
+    protected override void OnInitialized()
+    {
+        _rightScore = Bout.RightScore;
+        _leftScore  = Bout.LeftScore;
+        if (IsTied)
+            _manualWinnerId = Bout.WinnerId ?? Guid.Empty;
+    }
+
+    private bool IsTied => _leftScore != null && _rightScore != null && _leftScore == _rightScore;
+
+    private Guid? ComputedWinnerId
+    {
+        get
+        {
+            if (_leftScore == null || _rightScore == null) return null;
+            if (_leftScore != _rightScore)
+                return _leftScore > _rightScore ? Bout.LeftId : Bout.RightId;
+            return _manualWinnerId == Guid.Empty ? null : _manualWinnerId;
+        }
+    }
+
+    private bool CanSave => ComputedWinnerId != null;
+
+    private void Save()
+    {
+        Bout.RightScore = _rightScore;
+        Bout.LeftScore  = _leftScore;
+        if (IsTied)
+            Bout.SetWinner(_manualWinnerId);
+        else
+            Bout.WinnerId = null;
+        MudDialog.Close(DialogResult.Ok(true));
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

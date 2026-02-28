@@ -5,6 +5,9 @@
 @using ClubLog.Core.Utils
 
 @inject PoolRepository PoolRepo
+@inject ElimRepository ElimRepo
+@inject NavigationManager Nav
+
 @inject IElimService ElimService
 @inject IDialogService DialogService
 
@@ -45,6 +48,13 @@
     protected override async Task OnInitializedAsync()
     {
         _pools = await PoolRepo.GetPoolsForEvent(EventName);
+        foreach (var p in _pools)
+        {
+            foreach (var f in p.Fencers)
+            {
+                f.Stats.Opponents = p.Fencers.Count - 1;
+            }
+        }
         StateHasChanged();  
     }
 
@@ -60,8 +70,17 @@
         var parameters = new DialogParameters
         {
             { "Results", results },
+            { "StartDes", EventCallback.Factory.Create(this, StartDes) },
         };
         await DialogService.ShowAsync<ResultsDialog>("Pool Results", parameters);
+    }
+
+    private async Task StartDes()
+    {
+        var results = ElimService.GetElimResults(_pools);
+        var bouts = ElimService.StartElims(results);
+        await ElimRepo.CreateElimBouts(bouts, EventName);
+        Nav.NavigateTo($"elims/{EventName}");
     }
 
 }

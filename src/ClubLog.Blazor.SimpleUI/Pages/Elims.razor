@@ -1,0 +1,179 @@
+@page "/elims/{EventName}"
+@using ClubLog.Blazor.Simple.BrowserRepositories
+@using ClubLog.Core.Models
+
+@inject ElimRepository ElimRepo
+
+<Bracket Rounds="_rounds" OnBoutUpdate="UpdateBout"/>
+
+@code {
+    [Parameter] public required string EventName { get; set; }
+    private List<List<ElimBout>> _rounds = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var allBouts = await ElimRepo.GetElimBouts(EventName);
+
+        foreach (var bout in allBouts)
+        {
+            if (bout.WinnerId != null) continue;
+            if (bout.LeftId == Guid.Empty)       bout.WinnerId = bout.RightId;
+            else if (bout.RightId == Guid.Empty) bout.WinnerId = bout.LeftId;
+            else continue;
+            await ElimRepo.UpdateElim(bout);
+        }
+
+        _rounds = allBouts
+            .GroupBy(b => b.Round)
+            .OrderBy(g => g.Key)
+            .Select(g => g.ToList())
+            .ToList();
+
+        StateHasChanged();
+    }
+
+    private async Task UpdateBout(ElimBout bout)
+    {
+        await ElimRepo.UpdateElim(bout);
+
+        await CascadeFromRound(bout.Round, _rounds[bout.Round].IndexOf(bout));
+        await TryAddNextRoundBouts(bout.Round);
+
+        StateHasChanged();
+    }
+
+    // Create next-round bouts as soon as a pair of parent bouts both have winners,
+    // rather than waiting for the entire current round to finish.
+    private async Task TryAddNextRoundBouts(int roundIndex)
+    {
+        var currentRound = _rounds[roundIndex];
+        var existsNextRound = _rounds.Count > roundIndex + 1;
+        var existingNextRound = existsNextRound ? _rounds[roundIndex + 1] : new List<ElimBout>();
+
+        var existingRightPlaces = existingNextRound
+            .Where(b => b.RightPlace.HasValue)
+            .Select(b => b.RightPlace!.Value)
+            .ToHashSet();
+
+        var toAdd = new List<(int PairIdx, ElimBout Bout)>();
+
+        for (var i = 0; i + 1 < currentRound.Count; i += 2)
+        {
+            var boutA = currentRound[i];
+            var boutB = currentRound[i + 1];
+
+            var winnerA = GetWinnerFencer(boutA);
+            var winnerB = GetWinnerFencer(boutB);
+            if (winnerA == null || winnerB == null) continue;
+
+            var aIsTop    = (boutA.WinnerPlace ?? long.MaxValue) <= (boutB.WinnerPlace ?? long.MaxValue);
+            var rightPlace = aIsTop ? boutA.WinnerPlace : boutB.WinnerPlace;
+
+            if (rightPlace.HasValue && existingRightPlaces.Contains(rightPlace.Value)) continue;
+
+            var fotr = aIsTop ? winnerA : winnerB;
+            var fotl = aIsTop ? winnerB : winnerA;
+
+            var boutBase = new BoutBase { LeftId = fotl.Id, RightId = fotr.Id };
+            toAdd.Add((i / 2, new ElimBout(boutBase, fotl, fotr)
+            {
+                Round       = roundIndex + 1,
+                RightPlace  = aIsTop ? boutA.WinnerPlace : boutB.WinnerPlace,
+                LeftPlace   = aIsTop ? boutB.WinnerPlace : boutA.WinnerPlace,
+                WinnerPlace = aIsTop ? boutA.WinnerPlace : boutB.WinnerPlace,
+            }));
+        }
+
+        if (toAdd.Count == 0) return;
+
+        await ElimRepo.AddElimBouts(toAdd.Select(x => x.Bout).ToList(), EventName);
+
+        if (!existsNextRound)
+            _rounds.Add(existingNextRound);
+
+        // Insert each new bout at the position matching its pair index so bracket order is preserved.
+        foreach (var (pairIdx, newBout) in toAdd.OrderBy(x => x.PairIdx))
+        {
+            var pos = existingNextRound.Count(b => GetPairIndex(currentRound, b.RightPlace) < pairIdx);
+            existingNextRound.Insert(pos, newBout);
+        }
+    }
+
+    // Finds which pair index (0-based) in currentRound would produce a next-round
+    // bout with the given RightPlace, used to determine insertion order.
+    private static int GetPairIndex(List<ElimBout> currentRound, long? rightPlace)
+    {
+        for (var i = 0; i + 1 < currentRound.Count; i += 2)
+        {
+            var boutA  = currentRound[i];
+            var boutB  = currentRound[i + 1];
+            var aIsTop = (boutA.WinnerPlace ?? long.MaxValue) <= (boutB.WinnerPlace ?? long.MaxValue);
+            if ((aIsTop ? boutA.WinnerPlace : boutB.WinnerPlace) == rightPlace) return i / 2;
+        }
+        return int.MaxValue;
+    }
+
+    // When a bout's winner changes, propagate the new fencer forward through subsequent
+    // stored rounds, clearing scores along the way so those bouts can be re-entered.
+    private async Task CascadeFromRound(int roundIndex, int boutIndex)
+    {
+        var round = roundIndex;
+        var idx   = boutIndex;
+
+        while (round + 1 < _rounds.Count)
+        {
+            var nextRoundIdx = round + 1;
+            var pairStart    = (idx / 2) * 2;
+
+            if (pairStart + 1 >= _rounds[round].Count) break;
+
+            var boutA = _rounds[round][pairStart];
+            var boutB = _rounds[round][pairStart + 1];
+
+            var winnerA = GetWinnerFencer(boutA);
+            var winnerB = GetWinnerFencer(boutB);
+
+            // Can't determine expected fencers if either parent has no result yet
+            if (winnerA == null || winnerB == null) break;
+
+            var aIsTop            = (boutA.WinnerPlace ?? long.MaxValue) <= (boutB.WinnerPlace ?? long.MaxValue);
+            var expectedRightPlace = aIsTop ? boutA.WinnerPlace : boutB.WinnerPlace;
+
+            // Find next-round bout by RightPlace — robust against out-of-order partial-round creation
+            var nextBout = _rounds[nextRoundIdx].FirstOrDefault(b => b.RightPlace == expectedRightPlace);
+            if (nextBout == null) break; // Bout not yet created for this pair
+
+            var newRight = aIsTop ? winnerA : winnerB;
+            var newLeft  = aIsTop ? winnerB : winnerA;
+
+            // Nothing changed — stop cascade
+            if (nextBout.RightId == newRight.Id && nextBout.LeftId == newLeft.Id) break;
+
+            // Update the fencer(s) and clear the result so scores can be re-entered
+            nextBout.RightId     = newRight.Id;
+            nextBout.Right       = newRight;
+            nextBout.LeftId      = newLeft.Id;
+            nextBout.Left        = newLeft;
+            nextBout.RightPlace  = aIsTop ? boutA.WinnerPlace : boutB.WinnerPlace;
+            nextBout.LeftPlace   = aIsTop ? boutB.WinnerPlace : boutA.WinnerPlace;
+            nextBout.WinnerPlace = nextBout.RightPlace;
+            nextBout.RightScore  = null;
+            nextBout.LeftScore   = null;
+            nextBout.WinnerId    = null;
+
+            await ElimRepo.UpdateElim(nextBout);
+
+            // Continue from nextBout's actual position (not assumed index)
+            round = nextRoundIdx;
+            idx   = _rounds[nextRoundIdx].IndexOf(nextBout);
+        }
+    }
+
+    private static FencerBase? GetWinnerFencer(ElimBout bout)
+    {
+        if (bout.WinnerId == null)         return null;
+        if (bout.WinnerId == bout.LeftId)  return bout.Left;
+        if (bout.WinnerId == bout.RightId) return bout.Right;
+        return null;
+    }
+}

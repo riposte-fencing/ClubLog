@@ -2,6 +2,7 @@
 
 public class ElimBout(BoutBase bout, FencerBase left, FencerBase right) : DetailedBout(bout, left, right)
 {
+    public ElimBout() : this(new BoutBase(), new FencerBase(), new FencerBase()) { }
     /*
      * What place will the winner take in the next DE round, for instance, if we're looking at the 1 v 8 bout in the
      * round of 8, the WinnerPlace will be 1 in the round of 4.
@@ -16,8 +17,10 @@ public class ElimBout(BoutBase bout, FencerBase left, FencerBase right) : Detail
      * 6----|
      */
     public long? WinnerPlace { get; set; }
-    
-    // These represent the places the fencers were initially out of pools, they will not change after assignment. 
+
+    // These represent the places the fencers were initially out of pools, they will not change after assignment.
     public long? RightPlace { get; set; }
     public long? LeftPlace { get; set; }
+
+    public int Round { get; set; }
 }

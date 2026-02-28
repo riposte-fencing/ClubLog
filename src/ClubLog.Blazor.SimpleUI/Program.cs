@@ -15,6 +15,7 @@ builder.Services.AddBlazoredLocalStorage();
 
 builder.Services.AddScoped<FencerRepository>();
 builder.Services.AddScoped<PoolRepository>();
+builder.Services.AddScoped<ElimRepository>();
 builder.Services.AddSingleton<IPoolService, PoolService>();
 builder.Services.AddSingleton<IElimService, ElimService>();
 

@@ -1,0 +1,289 @@
+﻿@using ClubLog.Blazor.Common.Dialogs
+@inject IDialogService DialogService
+
+@* Note: A lot of this file was written by Claude. This FE logic and styling was wacky for my BE brain. *@
+
+<MudContainer MaxWidth="MaxWidth.Large">
+    <div class="d-flex" style="gap: 32px; margin-bottom: 8px;">
+        @foreach (var label in _roundLabels)
+        {
+            <div style="width: 220px; text-align: center;">
+                <MudText Typo="Typo.subtitle2">@label</MudText>
+            </div>
+        }
+    </div>
+
+    <div class="d-flex" style="gap: 32px; overflow-x: auto; align-items: flex-start;">
+
+        @* Actual rounds — all have edit buttons *@
+        @for (var roundIdx = 0; roundIdx < Rounds.Count; roundIdx++)
+        {
+            var k = roundIdx;
+            var paddingTop = k == 0 ? 0 : (int)((BoutCardHeight + RoundGap) / 2.0 * (Math.Pow(2, k) - 1));
+            var boutGap    = k == 0 ? RoundGap : (int)((BoutCardHeight + RoundGap) * Math.Pow(2, k) - BoutCardHeight);
+
+            <div class="d-flex flex-column" style="gap: @(boutGap)px; padding-top: @(paddingTop)px;">
+                @foreach (var slot in GetRoundSlots(k))
+                {
+                    @if (slot.Bout != null)
+                    {
+                        var bout = slot.Bout;
+                        var rightIsWinner = bout.WinnerId.HasValue && bout.WinnerId == bout.RightId;
+                        var leftIsWinner  = bout.WinnerId.HasValue && bout.WinnerId == bout.LeftId;
+                        <div class="d-flex align-center" style="gap: 8px;">
+                            <MudPaper Class="custom-paper pa-3" Style="width: 220px;">
+                                <div class="d-flex align-center" style="gap: 8px;">
+                                    <MudText Typo="Typo.caption" Style="min-width: 20px; text-align: right; opacity: 0.6;">
+                                        @(bout.RightPlace >= 0 ? bout.RightPlace : null)
+                                    </MudText>
+                                    <div style="flex: 1;">
+                                        <MudText Typo="Typo.body2" Style="@(rightIsWinner ? "border: 2px solid green; border-radius: 50px; padding: 2px 8px; display: inline-block;" : "")">@bout.Right</MudText>
+                                    </div>
+                                    @if (bout.RightScore.HasValue)
+                                    {
+                                        <MudText Typo="Typo.caption" Style="font-weight: bold;">@bout.RightScore</MudText>
+                                    }
+                                </div>
+                                <MudDivider Class="my-1"/>
+                                <div class="d-flex align-center" style="gap: 8px;">
+                                    <MudText Typo="Typo.caption" Style="min-width: 20px; text-align: right; opacity: 0.6;">
+                                        @(bout.LeftPlace >= 0 ? bout.LeftPlace : null)
+                                    </MudText>
+                                    <div style="flex: 1;">
+                                        <MudText Typo="Typo.body2" Style="@(leftIsWinner ? "border: 2px solid green; border-radius: 50px; padding: 2px 8px; display: inline-block;" : "")">@bout.Left</MudText>
+                                    </div>
+                                    @if (bout.LeftScore.HasValue)
+                                    {
+                                        <MudText Typo="Typo.caption" Style="font-weight: bold;">@bout.LeftScore</MudText>
+                                    }
+                                </div>
+                            </MudPaper>
+                            @if (bout.LeftId != Guid.Empty && bout.RightId != Guid.Empty)
+                            {
+                                <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" OnClick="() => EditBout(bout)"/>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        @* Placeholder for a pair whose parents haven't both finished yet *@
+                        <MudPaper Class="custom-paper pa-3" Style="width: 220px;">
+                            <div class="d-flex align-center" style="gap: 8px;">
+                                <MudText Typo="Typo.caption" Style="min-width: 20px; text-align: right; opacity: 0.6;">@slot.TopPlace</MudText>
+                                <MudText Typo="Typo.body2" Style="opacity: 0.4;">TBD</MudText>
+                            </div>
+                            <MudDivider Class="my-1"/>
+                            <div class="d-flex align-center" style="gap: 8px;">
+                                <MudText Typo="Typo.caption" Style="min-width: 20px; text-align: right; opacity: 0.6;">@slot.BottomPlace</MudText>
+                                <MudText Typo="Typo.body2" Style="opacity: 0.4;">TBD</MudText>
+                            </div>
+                        </MudPaper>
+                    }
+                }
+            </div>
+        }
+
+        @* Derived display — TBD slots for the pending next round *@
+        @for (var roundIdx = 0; roundIdx < _derivedRounds.Count; roundIdx++)
+        {
+            var round = _derivedRounds[roundIdx];
+            var k = Rounds.Count + roundIdx;
+            var paddingTop = (int)((BoutCardHeight + RoundGap) / 2.0 * (Math.Pow(2, k) - 1));
+            var boutGap    = (int)((BoutCardHeight + RoundGap) * Math.Pow(2, k) - BoutCardHeight);
+
+            <div class="d-flex flex-column" style="gap: @(boutGap)px; padding-top: @(paddingTop)px;">
+                @foreach (var slot in round)
+                {
+                    <MudPaper Class="custom-paper pa-3" Style="width: 220px;">
+                        <div class="d-flex align-center" style="gap: 8px;">
+                            <MudText Typo="Typo.caption" Style="min-width: 20px; text-align: right; opacity: 0.6;">
+                                @slot.TopPlace
+                            </MudText>
+                            <MudText Typo="Typo.body2" Style="@(slot.TopName != null ? "" : "opacity: 0.4;")">
+                                @(slot.TopName ?? "TBD")
+                            </MudText>
+                        </div>
+                        <MudDivider Class="my-1"/>
+                        <div class="d-flex align-center" style="gap: 8px;">
+                            <MudText Typo="Typo.caption" Style="min-width: 20px; text-align: right; opacity: 0.6;">
+                                @slot.BottomPlace
+                            </MudText>
+                            <MudText Typo="Typo.body2" Style="@(slot.BottomName != null ? "" : "opacity: 0.4;")">
+                                @(slot.BottomName ?? "TBD")
+                            </MudText>
+                        </div>
+                    </MudPaper>
+                }
+            </div>
+        }
+
+    </div>
+</MudContainer>
+
+@code {
+
+    private const int BoutCardHeight = 72;
+    private const int RoundGap = 16;
+
+    [Parameter] public required List<List<ElimBout>> Rounds { get; set; }
+    [Parameter] public EventCallback<ElimBout> OnBoutUpdate { get; set; }
+
+    private record BracketSlot(long? TopPlace, string? TopName, long? BottomPlace, string? BottomName);
+
+    private List<List<BracketSlot>> _derivedRounds = new();
+    private List<string> _roundLabels = new();
+
+    protected override void OnParametersSet()
+    {
+        _derivedRounds = ComputeDerivedRounds();
+        _roundLabels   = ComputeRoundLabels();
+    }
+
+    private List<List<BracketSlot>> ComputeDerivedRounds()
+    {
+        if (Rounds.Count == 0) return new();
+
+        var result  = new List<List<BracketSlot>>();
+        var entries = GetFrontierEntries();
+
+        while (entries.Count >= 2)
+        {
+            var round = new List<BracketSlot>();
+            for (var i = 0; i + 1 < entries.Count; i += 2)
+                round.Add(new BracketSlot(entries[i].Place, entries[i].Name, entries[i + 1].Place, entries[i + 1].Name));
+            result.Add(round);
+            entries = round.Select(s => (Place: s.TopPlace, Name: (string?)null)).ToList();
+        }
+
+        return result;
+    }
+
+    // Returns the "frontier" entries used to project derived TBD rounds.
+    // When the last stored round is only partially populated (some pairs not yet advanced), gaps are filled with TBD
+    // entries derived from the previous round.
+    private List<(long? Place, string? Name)> GetFrontierEntries()
+    {
+        var last = Rounds.Last();
+
+        if (Rounds.Count < 2)
+        {
+            return last.Select(b => (b.WinnerPlace, GetWinnerName(b))).ToList();
+        }
+
+        var prev = Rounds[^2];
+        var expectedCount = prev.Count / 2;
+
+        // Last round is full - use it directly
+        if (last.Count >= expectedCount)
+        {
+            return last.Select(b => (b.WinnerPlace, GetWinnerName(b))).ToList();
+        }
+
+        // Last round is partial: scan the previous round pair-by-pair and fill gaps
+        var existingByRightPlace = last
+            .Where(b => b.RightPlace.HasValue)
+            .ToDictionary(b => b.RightPlace!.Value);
+
+        var entries = new List<(long? Place, string? Name)>();
+        for (var i = 0; i + 1 < prev.Count; i += 2)
+        {
+            var boutA  = prev[i];
+            var boutB  = prev[i + 1];
+            var aIsTop = (boutA.WinnerPlace ?? long.MaxValue) <= (boutB.WinnerPlace ?? long.MaxValue);
+            var topPlace = aIsTop ? boutA.WinnerPlace : boutB.WinnerPlace;
+
+            if (topPlace.HasValue && existingByRightPlace.TryGetValue(topPlace.Value, out var nextBout))
+            {
+                entries.Add((nextBout.WinnerPlace, GetWinnerName(nextBout)));
+            }
+            else
+            {
+                entries.Add((topPlace, null)); // pair not yet completed — show as TBD
+            }
+        }
+        return entries;
+    }
+
+    // Returns slots for a round in bracket order. For partial rounds (where only some
+    // pairs have advanced), gaps are filled with null-Bout placeholders so the column
+    // always shows the full expected number of slots.
+    private List<RoundSlot> GetRoundSlots(int roundIdx)
+    {
+        var round = Rounds[roundIdx];
+
+        if (roundIdx == 0)
+            return round.Select(b => new RoundSlot(b, b.RightPlace, b.LeftPlace)).ToList();
+
+        var prev          = Rounds[roundIdx - 1];
+        var expectedCount = prev.Count / 2;
+
+        if (round.Count >= expectedCount)
+            return round.Select(b => new RoundSlot(b, b.RightPlace, b.LeftPlace)).ToList();
+
+        // Partial round: walk the previous round pair-by-pair
+        var byRightPlace = round
+            .Where(b => b.RightPlace.HasValue)
+            .ToDictionary(b => b.RightPlace!.Value);
+
+        var slots = new List<RoundSlot>();
+        for (var i = 0; i + 1 < prev.Count; i += 2)
+        {
+            var boutA    = prev[i];
+            var boutB    = prev[i + 1];
+            var aIsTop   = (boutA.WinnerPlace ?? long.MaxValue) <= (boutB.WinnerPlace ?? long.MaxValue);
+            var topPlace = aIsTop ? boutA.WinnerPlace : boutB.WinnerPlace;
+            var botPlace = aIsTop ? boutB.WinnerPlace : boutA.WinnerPlace;
+
+            slots.Add(topPlace.HasValue && byRightPlace.TryGetValue(topPlace.Value, out var existing)
+                ? new RoundSlot(existing, topPlace, botPlace)
+                : new RoundSlot(null, topPlace, botPlace));
+        }
+        return slots;
+    }
+
+    private static string? GetWinnerName(ElimBout bout)
+    {
+        var id = bout.WinnerId;
+        if (id == null) return null;
+        if (id == bout.LeftId) return bout.Left.ToString();
+        if (id == bout.RightId) return bout.Right.ToString();
+        return null;
+    }
+
+    private List<string> ComputeRoundLabels()
+    {
+        if (Rounds.Count == 0)
+        {
+            return new();
+        }
+        
+        var labels = new List<string>();
+        var bracketSize = Rounds[0].Count * 2;
+        var totalRounds = Rounds.Count + _derivedRounds.Count;
+
+        for (var i = 0; i < totalRounds; i++)
+        {
+            var size = bracketSize / (int)Math.Pow(2, i);
+            labels.Add(size == 2 ? "Final" : $"Round of {size}");
+        }
+
+        return labels;
+    }
+
+    private async Task EditBout(ElimBout bout)
+    {
+        var parameters = new DialogParameters { { "Bout", bout } };
+        var dialog = await DialogService.ShowAsync<ElimBoutDialog>("Bout Score", parameters);
+        var result = await dialog.Result;
+
+        if (result is { Canceled: false })
+        {
+            _derivedRounds = ComputeDerivedRounds();
+            await OnBoutUpdate.InvokeAsync(bout);
+            StateHasChanged();
+        }
+    }
+
+    private record RoundSlot(ElimBout? Bout, long? TopPlace, long? BottomPlace);
+
+}

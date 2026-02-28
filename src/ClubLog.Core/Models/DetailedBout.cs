@@ -2,6 +2,8 @@
 
 public class DetailedBout : BoutBase
 {
+    public DetailedBout() { Left = null!; Right = null!; }
+
     public DetailedBout(BoutBase bout, FencerBase left, FencerBase right)
     {
         BoutId = bout.BoutId;

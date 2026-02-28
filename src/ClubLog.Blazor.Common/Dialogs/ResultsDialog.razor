@@ -16,6 +16,7 @@
         </MudPaper>
     </DialogContent>
     <DialogActions>
+        <MudButton OnClick="Start">Start DEs</MudButton>
         <MudButton OnClick="Close">Close</MudButton>
     </DialogActions>
 </MudDialog>
@@ -23,6 +24,12 @@
 @code {
     [CascadingParameter] private IMudDialogInstance MudDialog { get; set; }
     [Parameter] public required List<FencerWithStats> Results { get; set; }
+    [Parameter] public required EventCallback StartDes { get; set; }
 
     private void Close() => MudDialog.Close();
+
+    public async Task Start()
+    {
+        await StartDes.InvokeAsync();
+    }
 }
