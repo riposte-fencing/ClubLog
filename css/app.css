@@ -57,6 +57,25 @@
     border-radius: 50%;
 }
 
+.score-excluded {
+    border: 2px solid #9e9e9e;
+    border-radius: 50%;
+}
+
+.excluded-row td {
+    position: relative;
+}
+
+.excluded-row td::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 50%;
+    border-top: 2px solid #9e9e9e;
+    pointer-events: none;
+}
+
 /* Horizontal scroll container */
 .pools-scroll-container {
     display: flex;
