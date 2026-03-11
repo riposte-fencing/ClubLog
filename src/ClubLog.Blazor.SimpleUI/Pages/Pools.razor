@@ -66,13 +66,20 @@
     private async Task Finish()
     {
         var results = ElimService.GetElimResults(_pools);
-        
+
         var parameters = new DialogParameters
         {
             { "Results", results },
             { "StartDes", EventCallback.Factory.Create(this, StartDes) },
         };
-        await DialogService.ShowAsync<ResultsDialog>("Pool Results", parameters);
+        var dialog = await DialogService.ShowAsync<ResultsDialog>("Pool Results", parameters);
+        await dialog.Result;
+
+        foreach (var fencer in results)
+        {
+            fencer.Place = 0;
+            fencer.PlaceStr = string.Empty;
+        }
     }
 
     private async Task StartDes()

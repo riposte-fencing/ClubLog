@@ -23,7 +23,7 @@ public class ElimService : IElimService
         var fencerHs = new HashSet<Guid>();
         var fencers = pools
             .SelectMany(x => x.Fencers)
-            .Where(x => fencerHs.Add(x.Id))
+            .Where(x => fencerHs.Add(x.Id) && !x.Excluded)
             .ToList();
 
         var random = new Random();

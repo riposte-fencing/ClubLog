@@ -46,16 +46,24 @@
         </tr>
         </thead>
         <tbody>
+        @{
+            var excludedIds = Pool.Fencers.Where(f => f.Excluded).Select(f => f.Id).ToHashSet();
+        }
         @for (var i = 0; i < Pool.Fencers.Count; i++)
         {
             // Yep, we have to do this. Yes, it's goofy.
             var x = i + 1;
             var fencer = Pool.Fencers[i];
-            fencer.Stats = Pool.Bouts.GetStatsForFencer(fencer.Id);
+            fencer.Stats = fencer.Excluded
+                ? new PoolStats()
+                : Pool.Bouts.GetStatsForFencer(fencer.Id, excludedIds);
             
-            <tr>
-                <td class="name-box right-text">
-                    <MudText Typo="Typo.subtitle2">@($"{fencer}: {x}")</MudText>
+            <tr class="@(fencer.Excluded ? "excluded-row" : "")">
+                <td class="name-box">
+                    <div style="display: flex; align-items: center;">
+                        <MudIconButton Icon="@Icons.Material.Outlined.Close" OnClick="async () => await ToggleExcluded(fencer)"/>
+                        <MudText Typo="Typo.subtitle2" Style="flex: 1; text-align: right; padding-right: 10px;">@($"{fencer}: {x}")</MudText>
+                    </div>
                 </td>
                 @for (var j = 1; j <= Pool.Fencers.Count; j++)
                 {
@@ -75,10 +83,11 @@
                         var value = right ? bout.RightScore : bout.LeftScore;
                         var isComplete = bout.LeftScore is not null && bout.RightScore is not null;
                         // Claude made this nasty ternary...
-                        var scoreClass = isComplete && bout.WinnerId == fencer.Id 
-                            ? "score-winner" : isComplete && bout.WinnerId is not null 
-                                ? "score-loser" : isComplete && bout.WinnerId is null 
-                                    ? "score-problem" : "";
+                        var scoreClass = fencer.Excluded
+                            ? "score-excluded" : isComplete && bout.WinnerId == fencer.Id
+                                ? "score-winner" : isComplete && bout.WinnerId is not null
+                                    ? "score-loser" : isComplete && bout.WinnerId is null
+                                        ? "score-problem" : "";
 
                         <td>
                             <div class="score-indicator @scoreClass">
@@ -158,6 +167,12 @@
             { "FixBouts", EventCallback.Factory.Create<List<DetailedBout>>(this, Fix) }
         };
         await DialogService.ShowAsync<ProblemBoutDialog>(string.Empty, parameters);
+    }
+
+    public async Task ToggleExcluded(FencerWithStats fencer)
+    {
+        fencer.Excluded = !fencer.Excluded;
+        await OnUpdate.InvokeAsync(Pool);
     }
 
     private async Task Fix(List<DetailedBout> bouts)

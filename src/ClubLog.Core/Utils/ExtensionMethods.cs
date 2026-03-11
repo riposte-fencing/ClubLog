@@ -32,13 +32,17 @@ public static class ExtensionMethods
         };
     }
 
-    public static PoolStats GetStatsForFencer(this List<BoutBase> bouts, Guid fencerId)
+    public static PoolStats GetStatsForFencer(this List<BoutBase> bouts, Guid fencerId, HashSet<Guid>? excludedIds = null)
     {
         var stats = new PoolStats();
         foreach (var b in bouts)
         {
             if (fencerId == b.LeftId || fencerId == b.RightId)
             {
+                var opponentId = fencerId == b.LeftId ? b.RightId : b.LeftId;
+                if (excludedIds is not null && excludedIds.Contains(opponentId)) continue;
+
+                stats.Opponents++;
                 if (b.WinnerId == fencerId)
                 {
                     stats.Victories++;
@@ -48,11 +52,11 @@ public static class ExtensionMethods
                 else
                 {
                     stats.TouchesScored += b.LoserScore ?? 0;
-                    stats.TouchesReceived += b.WinnerScore ?? 0;   
+                    stats.TouchesReceived += b.WinnerScore ?? 0;
                 }
             }
         }
-        
+
         return stats;
     }
 

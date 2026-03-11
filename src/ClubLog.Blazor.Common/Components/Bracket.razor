@@ -70,12 +70,12 @@
                         <MudPaper Class="custom-paper pa-3" Style="width: 220px;">
                             <div class="d-flex align-center" style="gap: 8px;">
                                 <MudText Typo="Typo.caption" Style="min-width: 20px; text-align: right; opacity: 0.6;">@slot.TopPlace</MudText>
-                                <MudText Typo="Typo.body2" Style="opacity: 0.4;">TBD</MudText>
+                                <MudText Typo="Typo.body2" Style="@(slot.TopName != null ? "" : "opacity: 0.4;")">@(slot.TopName ?? "TBD")</MudText>
                             </div>
                             <MudDivider Class="my-1"/>
                             <div class="d-flex align-center" style="gap: 8px;">
                                 <MudText Typo="Typo.caption" Style="min-width: 20px; text-align: right; opacity: 0.6;">@slot.BottomPlace</MudText>
-                                <MudText Typo="Typo.body2" Style="opacity: 0.4;">TBD</MudText>
+                                <MudText Typo="Typo.body2" Style="@(slot.BottomName != null ? "" : "opacity: 0.4;")">@(slot.BottomName ?? "TBD")</MudText>
                             </div>
                         </MudPaper>
                     }
@@ -234,9 +234,16 @@
             var topPlace = aIsTop ? boutA.WinnerPlace : boutB.WinnerPlace;
             var botPlace = aIsTop ? boutB.WinnerPlace : boutA.WinnerPlace;
 
-            slots.Add(topPlace.HasValue && byRightPlace.TryGetValue(topPlace.Value, out var existing)
-                ? new RoundSlot(existing, topPlace, botPlace)
-                : new RoundSlot(null, topPlace, botPlace));
+            if (topPlace.HasValue && byRightPlace.TryGetValue(topPlace.Value, out var existing))
+            {
+                slots.Add(new RoundSlot(existing, topPlace, botPlace));
+            }
+            else
+            {
+                var topBout = aIsTop ? boutA : boutB;
+                var botBout = aIsTop ? boutB : boutA;
+                slots.Add(new RoundSlot(null, topPlace, botPlace, GetWinnerName(topBout), GetWinnerName(botBout)));
+            }
         }
         return slots;
     }
@@ -284,6 +291,6 @@
         }
     }
 
-    private record RoundSlot(ElimBout? Bout, long? TopPlace, long? BottomPlace);
+    private record RoundSlot(ElimBout? Bout, long? TopPlace, long? BottomPlace, string? TopName = null, string? BottomName = null);
 
 }

@@ -21,7 +21,8 @@ public class FencerWithStats : FencerBase
     public PoolStats Stats { get; set; } = new();
     public int Place { get; set; }
     public string PlaceStr { get; set; }
-    public bool Tied { get; set; } = false;
+    public bool Tied { get; set; } 
+    public bool Excluded { get; set; }
 
     public override string ToString()
     {
