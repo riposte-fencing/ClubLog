@@ -6,9 +6,10 @@ namespace ClubLog.Core.Services;
 
 public class ElimService : IElimService
 {
-    private static Guid ByeGuid = Guid.Empty;
-    private static int ByePlace = -1;
-    private static FencerWithStats ByeFencer = new()
+    private static readonly Guid ByeGuid = Guid.Empty;
+    private const int ByePlace = -1;
+
+    private static readonly FencerWithStats ByeFencer = new()
     {
         Id = ByeGuid,
         Place = ByePlace,
@@ -52,10 +53,17 @@ public class ElimService : IElimService
             var topSeed = seedOrder[i];
             var bottomSeed = seedOrder[i + 1];
 
-            var fotr = topSeed <= advancing ? fencers[topSeed - 1] : ByeFencer;
-            var fotl = bottomSeed <= advancing ? fencers[bottomSeed - 1] : ByeFencer;
+            var fotr = topSeed <= advancing 
+                ? fencers[topSeed - 1] 
+                : ByeFencer;
+            var fotl = bottomSeed <= advancing 
+                ? fencers[bottomSeed - 1] 
+                : ByeFencer;
 
-            if (fotr.Id == ByeGuid && fotl.Id == ByeGuid) continue;
+            if (fotr.Id == ByeGuid && fotl.Id == ByeGuid)
+            {
+                continue;
+            }
 
             var boutBase = new BoutBase
             {
@@ -72,8 +80,14 @@ public class ElimService : IElimService
 
         foreach (var bout in result)
         {
-            if (bout.LeftId == ByeGuid)       bout.WinnerId = bout.RightId;
-            else if (bout.RightId == ByeGuid) bout.WinnerId = bout.LeftId;
+            if (bout.LeftId == ByeGuid)
+            {
+                bout.WinnerId = bout.RightId;
+            }
+            else if (bout.RightId == ByeGuid)
+            {
+                bout.WinnerId = bout.LeftId;
+            }
         }
 
         return result;
@@ -89,7 +103,7 @@ public class ElimService : IElimService
             var next = new int[current];
             for (var i = 0; i < order.Length; i++)
             {
-                next[i * 2]     = order[i];
+                next[i * 2] = order[i];
                 next[i * 2 + 1] = current + 1 - order[i];
             }
             order = next;
@@ -108,22 +122,33 @@ public class ElimService : IElimService
             var winnerA = GetWinnerFencer(boutA);
             var winnerB = GetWinnerFencer(boutB);
 
-            if (winnerA == null || winnerB == null) continue;
+            if (winnerA == null || winnerB == null)
+            {
+                continue;
+            }
 
             // Lower WinnerPlace = better seed = top seed (Right)
             var aIsTop = (boutA.WinnerPlace ?? long.MaxValue) <= (boutB.WinnerPlace ?? long.MaxValue);
-            var fotr      = aIsTop ? winnerA : winnerB;
-            var fotl      = aIsTop ? winnerB : winnerA;
-            var topPlace  = aIsTop ? boutA.WinnerPlace : boutB.WinnerPlace;
-            var botPlace  = aIsTop ? boutB.WinnerPlace : boutA.WinnerPlace;
+            var fotr= aIsTop 
+                ? winnerA 
+                : winnerB;
+            var fotl= aIsTop 
+                ? winnerB 
+                : winnerA;
+            var topPlace= aIsTop 
+                ? boutA.WinnerPlace 
+                : boutB.WinnerPlace;
+            var botPlace= aIsTop
+                ? boutB.WinnerPlace 
+                : boutA.WinnerPlace;
 
             var boutBase = new BoutBase { LeftId = fotl.Id, RightId = fotr.Id };
             result.Add(new ElimBout(boutBase, fotl, fotr)
             {
-                Round        = bouts[i].Round + 1,
-                RightPlace   = topPlace,
-                LeftPlace    = botPlace,
-                WinnerPlace  = topPlace
+                Round = bouts[i].Round + 1,
+                RightPlace = topPlace,
+                LeftPlace = botPlace,
+                WinnerPlace = topPlace
             });
         }
         return result;
@@ -131,10 +156,11 @@ public class ElimService : IElimService
 
     private static FencerBase? GetWinnerFencer(ElimBout bout)
     {
-        if (bout.WinnerId == null)          return null;
-        if (bout.WinnerId == bout.LeftId)   return bout.Left;
-        if (bout.WinnerId == bout.RightId)  return bout.Right;
-        return null;
+        if (bout.WinnerId == null) return null;
+        if (bout.WinnerId == bout.LeftId) return bout.Left;
+        return bout.WinnerId == bout.RightId 
+            ? bout.Right 
+            : null;
     }
     
     
