@@ -17,6 +17,7 @@ public class ElimService : IElimService
         FirstName = "BYE",
         LastName = string.Empty
     };
+    
     private static readonly int[] BracketSizes = { 2, 4, 8, 16, 32, 64, 128 };
     
     public List<FencerWithStats> GetElimResults(List<Pool> pools)
@@ -127,27 +128,14 @@ public class ElimService : IElimService
                 continue;
             }
 
-            // Lower WinnerPlace = better seed = top seed (Right)
-            var aIsTop = (boutA.WinnerPlace ?? long.MaxValue) <= (boutB.WinnerPlace ?? long.MaxValue);
-            var fotr = aIsTop 
-                ? winnerA
-                : winnerB;
-            var fotl= aIsTop 
-                ? winnerB
-                : winnerA;
-            var topPlace = aIsTop
-                ? boutA.WinnerPlace
-                : boutB.WinnerPlace;
-            var botPlace = aIsTop
-                ? boutB.WinnerPlace
-                : boutA.WinnerPlace;
+            var (fotr, fotl, topPlace, botPlace) = OrderByPlace(boutA, winnerA, boutB, winnerB);
 
             var boutBase = new BoutBase { LeftId = fotl.Id, RightId = fotr.Id };
             result.Add(new ElimBout(boutBase, fotl, fotr)
             {
-                Round       = bouts[i].Round + 1,
-                RightPlace  = topPlace,
-                LeftPlace   = botPlace,
+                Round = bouts[i].Round + 1,
+                RightPlace = topPlace,
+                LeftPlace = botPlace,
                 WinnerPlace = topPlace
             });
         }
@@ -208,33 +196,17 @@ public class ElimService : IElimService
                 continue;
             }
 
-            var aIsTop= (boutA.WinnerPlace ?? long.MaxValue) <= (boutB.WinnerPlace ?? long.MaxValue);
-            var rightPlace = aIsTop
-                ? boutA.WinnerPlace 
-                : boutB.WinnerPlace;
+            var (fotr, fotl, topPlace, botPlace) = OrderByPlace(boutA, winnerA, boutB, winnerB);
 
-            if (rightPlace.HasValue && existingRightPlaces.Contains(rightPlace.Value)) continue;
-
-            var fotr = aIsTop 
-                ? winnerA
-                : winnerB;
-            var fotl = aIsTop
-                ? winnerB
-                : winnerA;
+            if (topPlace.HasValue && existingRightPlaces.Contains(topPlace.Value)) continue;
 
             var boutBase = new BoutBase { LeftId = fotl.Id, RightId = fotr.Id };
             toAdd.Add((i / 2, new ElimBout(boutBase, fotl, fotr)
             {
-                Round       = currentRound[i].Round + 1,
-                RightPlace  = aIsTop 
-                    ? boutA.WinnerPlace 
-                    : boutB.WinnerPlace,
-                LeftPlace   = aIsTop
-                    ? boutB.WinnerPlace 
-                    : boutA.WinnerPlace,
-                WinnerPlace = aIsTop 
-                    ? boutA.WinnerPlace 
-                    : boutB.WinnerPlace,
+                Round = currentRound[i].Round + 1,
+                RightPlace = topPlace,
+                LeftPlace = botPlace,
+                WinnerPlace = topPlace,
             }));
         }
 
@@ -248,50 +220,65 @@ public class ElimService : IElimService
     {
         var changed = new List<ElimBout>();
         var round = roundIndex;
-        var idx= boutIndex;
+        var idx = boutIndex;
 
         while (round + 1 < rounds.Count)
         {
             var nextRoundIdx = round + 1;
-            var pairStart    = (idx / 2) * 2;
+            var pairStart = (idx / 2) * 2;
 
-            if (pairStart + 1 >= rounds[round].Count) break;
+            if (pairStart + 1 >= rounds[round].Count)
+            {
+                break;
+            }
 
             var boutA = rounds[round][pairStart];
             var boutB = rounds[round][pairStart + 1];
 
             var winnerA = boutA.GetWinnerFencer();
             var winnerB = boutB.GetWinnerFencer();
-            if (winnerA == null || winnerB == null) break;
+            if (winnerA == null || winnerB == null)
+            {
+                break;
+            }
 
-            var aIsTop             = (boutA.WinnerPlace ?? long.MaxValue) <= (boutB.WinnerPlace ?? long.MaxValue);
-            var expectedRightPlace = aIsTop ? boutA.WinnerPlace : boutB.WinnerPlace;
+            var (newRight, newLeft, topPlace, botPlace) = OrderByPlace(boutA, winnerA, boutB, winnerB);
 
-            var nextBout = rounds[nextRoundIdx].FirstOrDefault(b => b.RightPlace == expectedRightPlace);
-            if (nextBout == null) break;
+            var nextBout = rounds[nextRoundIdx].FirstOrDefault(b => b.RightPlace == topPlace);
+            if (nextBout == null)
+            {
+                break;
+            }
 
-            var newRight = aIsTop ? winnerA : winnerB;
-            var newLeft  = aIsTop ? winnerB : winnerA;
+            if (nextBout.RightId == newRight.Id && nextBout.LeftId == newLeft.Id)
+            {
+                break;
+            }
 
-            if (nextBout.RightId == newRight.Id && nextBout.LeftId == newLeft.Id) break;
-
-            nextBout.RightId     = newRight.Id;
-            nextBout.Right       = newRight;
-            nextBout.LeftId      = newLeft.Id;
-            nextBout.Left        = newLeft;
-            nextBout.RightPlace  = aIsTop ? boutA.WinnerPlace : boutB.WinnerPlace;
-            nextBout.LeftPlace   = aIsTop ? boutB.WinnerPlace : boutA.WinnerPlace;
+            nextBout.RightId = newRight.Id;
+            nextBout.Right = newRight;
+            nextBout.LeftId = newLeft.Id;
+            nextBout.Left = newLeft;
+            nextBout.RightPlace = topPlace;
+            nextBout.LeftPlace = botPlace;
             nextBout.WinnerPlace = nextBout.RightPlace;
-            nextBout.RightScore  = null;
-            nextBout.LeftScore   = null;
-            nextBout.WinnerId    = null;
+            nextBout.RightScore = null;
+            nextBout.LeftScore = null;
+            nextBout.WinnerId = null;
 
             changed.Add(nextBout);
 
             round = nextRoundIdx;
-            idx   = rounds[nextRoundIdx].IndexOf(nextBout);
+            idx = rounds[nextRoundIdx].IndexOf(nextBout);
         }
 
         return changed;
+    }
+
+    private static (FencerBase Top, FencerBase Bot, long? TopPlace, long? BotPlace) OrderByPlace(ElimBout boutA, FencerBase winnerA, ElimBout boutB, FencerBase winnerB)
+    {
+        return (boutA.WinnerPlace ?? long.MaxValue) <= (boutB.WinnerPlace ?? long.MaxValue)
+            ? (winnerA, winnerB, boutA.WinnerPlace, boutB.WinnerPlace)
+            : (winnerB, winnerA, boutB.WinnerPlace, boutA.WinnerPlace);
     }
 }
