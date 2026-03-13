@@ -2,6 +2,26 @@
 
 namespace ClubLog.Core.Utils;
 
+public static class ElimBoutExtensions
+{
+    public static FencerBase? GetWinnerFencer(this ElimBout bout)
+    {
+        if (bout.WinnerId == null)
+        {
+            return null;
+        }
+
+        if (bout.WinnerId == bout.LeftId)
+        {
+            return bout.Left;
+        }
+        
+        return bout.WinnerId == bout.RightId 
+            ? bout.Right 
+            : null;
+    }
+}
+
 public static class ExtensionMethods
 {
     public static string ToPermutationString(this List<Pool> pools)

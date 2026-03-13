@@ -119,8 +119,8 @@ public class ElimService : IElimService
             var boutA = bouts[i];
             var boutB = bouts[i + 1];
 
-            var winnerA = GetWinnerFencer(boutA);
-            var winnerB = GetWinnerFencer(boutB);
+            var winnerA = boutA.GetWinnerFencer();
+            var winnerB = boutB.GetWinnerFencer();
 
             if (winnerA == null || winnerB == null)
             {
@@ -129,39 +129,169 @@ public class ElimService : IElimService
 
             // Lower WinnerPlace = better seed = top seed (Right)
             var aIsTop = (boutA.WinnerPlace ?? long.MaxValue) <= (boutB.WinnerPlace ?? long.MaxValue);
-            var fotr= aIsTop 
-                ? winnerA 
+            var fotr = aIsTop 
+                ? winnerA
                 : winnerB;
             var fotl= aIsTop 
-                ? winnerB 
+                ? winnerB
                 : winnerA;
-            var topPlace= aIsTop 
-                ? boutA.WinnerPlace 
+            var topPlace = aIsTop
+                ? boutA.WinnerPlace
                 : boutB.WinnerPlace;
-            var botPlace= aIsTop
-                ? boutB.WinnerPlace 
+            var botPlace = aIsTop
+                ? boutB.WinnerPlace
                 : boutA.WinnerPlace;
 
             var boutBase = new BoutBase { LeftId = fotl.Id, RightId = fotr.Id };
             result.Add(new ElimBout(boutBase, fotl, fotr)
             {
-                Round = bouts[i].Round + 1,
-                RightPlace = topPlace,
-                LeftPlace = botPlace,
+                Round       = bouts[i].Round + 1,
+                RightPlace  = topPlace,
+                LeftPlace   = botPlace,
                 WinnerPlace = topPlace
             });
         }
         return result;
     }
 
-    private static FencerBase? GetWinnerFencer(ElimBout bout)
+    public List<ElimBout> ResolveByeWinners(List<ElimBout> bouts)
     {
-        if (bout.WinnerId == null) return null;
-        if (bout.WinnerId == bout.LeftId) return bout.Left;
-        return bout.WinnerId == bout.RightId 
-            ? bout.Right 
-            : null;
+        var changed = new List<ElimBout>();
+        foreach (var bout in bouts.Where(bout => bout.WinnerId == null))
+        {
+            if (bout.LeftId != Guid.Empty && bout.RightId != Guid.Empty)
+            {
+                continue;
+            }
+            
+            if (bout.LeftId == Guid.Empty)
+            {
+                bout.WinnerId = bout.RightId;
+            }
+            else if (bout.RightId == Guid.Empty)
+            {
+                bout.WinnerId = bout.LeftId;
+            }
+            
+            changed.Add(bout);
+        }
+        return changed;
     }
-    
-    
+
+    public List<List<ElimBout>> GroupIntoRounds(List<ElimBout> bouts)
+    {
+        return bouts
+            .GroupBy(b => b.Round)
+            .OrderBy(g => g.Key)
+            .Select(g => g.ToList())
+            .ToList();
+    }
+
+    public List<ElimBout> GetNewNextRoundBouts(List<ElimBout> currentRound, List<ElimBout> existingNextRound)
+    {
+        var existingRightPlaces = existingNextRound
+            .Where(b => b.RightPlace.HasValue)
+            .Select(b => b.RightPlace!.Value)
+            .ToHashSet();
+
+        var toAdd = new List<(int PairIdx, ElimBout Bout)>();
+
+        for (var i = 0; i + 1 < currentRound.Count; i += 2)
+        {
+            var boutA = currentRound[i];
+            var boutB = currentRound[i + 1];
+
+            var winnerA = boutA.GetWinnerFencer();
+            var winnerB = boutB.GetWinnerFencer();
+            if (winnerA == null || winnerB == null)
+            {
+                continue;
+            }
+
+            var aIsTop= (boutA.WinnerPlace ?? long.MaxValue) <= (boutB.WinnerPlace ?? long.MaxValue);
+            var rightPlace = aIsTop
+                ? boutA.WinnerPlace 
+                : boutB.WinnerPlace;
+
+            if (rightPlace.HasValue && existingRightPlaces.Contains(rightPlace.Value)) continue;
+
+            var fotr = aIsTop 
+                ? winnerA
+                : winnerB;
+            var fotl = aIsTop
+                ? winnerB
+                : winnerA;
+
+            var boutBase = new BoutBase { LeftId = fotl.Id, RightId = fotr.Id };
+            toAdd.Add((i / 2, new ElimBout(boutBase, fotl, fotr)
+            {
+                Round       = currentRound[i].Round + 1,
+                RightPlace  = aIsTop 
+                    ? boutA.WinnerPlace 
+                    : boutB.WinnerPlace,
+                LeftPlace   = aIsTop
+                    ? boutB.WinnerPlace 
+                    : boutA.WinnerPlace,
+                WinnerPlace = aIsTop 
+                    ? boutA.WinnerPlace 
+                    : boutB.WinnerPlace,
+            }));
+        }
+
+        return toAdd
+            .OrderBy(x => x.PairIdx)
+            .Select(x => x.Bout)
+            .ToList();
+    }
+
+    public List<ElimBout> CascadeWinners(List<List<ElimBout>> rounds, int roundIndex, int boutIndex)
+    {
+        var changed = new List<ElimBout>();
+        var round = roundIndex;
+        var idx= boutIndex;
+
+        while (round + 1 < rounds.Count)
+        {
+            var nextRoundIdx = round + 1;
+            var pairStart    = (idx / 2) * 2;
+
+            if (pairStart + 1 >= rounds[round].Count) break;
+
+            var boutA = rounds[round][pairStart];
+            var boutB = rounds[round][pairStart + 1];
+
+            var winnerA = boutA.GetWinnerFencer();
+            var winnerB = boutB.GetWinnerFencer();
+            if (winnerA == null || winnerB == null) break;
+
+            var aIsTop             = (boutA.WinnerPlace ?? long.MaxValue) <= (boutB.WinnerPlace ?? long.MaxValue);
+            var expectedRightPlace = aIsTop ? boutA.WinnerPlace : boutB.WinnerPlace;
+
+            var nextBout = rounds[nextRoundIdx].FirstOrDefault(b => b.RightPlace == expectedRightPlace);
+            if (nextBout == null) break;
+
+            var newRight = aIsTop ? winnerA : winnerB;
+            var newLeft  = aIsTop ? winnerB : winnerA;
+
+            if (nextBout.RightId == newRight.Id && nextBout.LeftId == newLeft.Id) break;
+
+            nextBout.RightId     = newRight.Id;
+            nextBout.Right       = newRight;
+            nextBout.LeftId      = newLeft.Id;
+            nextBout.Left        = newLeft;
+            nextBout.RightPlace  = aIsTop ? boutA.WinnerPlace : boutB.WinnerPlace;
+            nextBout.LeftPlace   = aIsTop ? boutB.WinnerPlace : boutA.WinnerPlace;
+            nextBout.WinnerPlace = nextBout.RightPlace;
+            nextBout.RightScore  = null;
+            nextBout.LeftScore   = null;
+            nextBout.WinnerId    = null;
+
+            changed.Add(nextBout);
+
+            round = nextRoundIdx;
+            idx   = rounds[nextRoundIdx].IndexOf(nextBout);
+        }
+
+        return changed;
+    }
 }
