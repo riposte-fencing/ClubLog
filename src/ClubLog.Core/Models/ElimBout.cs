@@ -1,5 +1,7 @@
 ﻿namespace ClubLog.Core.Models;
 
+public record BracketSlot(long? TopPlace, string? TopName, long? BottomPlace, string? BottomName);
+
 public class ElimBout(BoutBase bout, FencerBase left, FencerBase right) : DetailedBout(bout, left, right)
 {
     public ElimBout() : this(new BoutBase(), new FencerBase(), new FencerBase()) { }

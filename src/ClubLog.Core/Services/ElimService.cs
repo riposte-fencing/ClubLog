@@ -275,6 +275,85 @@ public class ElimService : IElimService
         return changed;
     }
 
+    public List<string> GetRoundLabels(List<List<ElimBout>> rounds, int derivedRoundCount)
+    {
+        if (rounds.Count == 0) return new();
+
+        var labels = new List<string>();
+        var bracketSize = rounds[0].Count * 2;
+        var totalRounds = rounds.Count + derivedRoundCount;
+
+        for (var i = 0; i < totalRounds; i++)
+        {
+            var size = bracketSize / (int)Math.Pow(2, i);
+            labels.Add(size == 2 ? "Final" : $"Round of {size}");
+        }
+
+        return labels;
+    }
+
+    public List<List<BracketSlot>> GetDerivedRounds(List<List<ElimBout>> rounds)
+    {
+        if (rounds.Count == 0) return new();
+
+        var result = new List<List<BracketSlot>>();
+        var entries = GetFrontierEntries(rounds);
+
+        while (entries.Count >= 2)
+        {
+            var round = new List<BracketSlot>();
+            for (var i = 0; i + 1 < entries.Count; i += 2)
+                round.Add(new BracketSlot(entries[i].Place, entries[i].Name, entries[i + 1].Place, entries[i + 1].Name));
+            result.Add(round);
+            entries = round.Select(s => (Place: s.TopPlace, Name: (string?)null)).ToList();
+        }
+
+        return result;
+    }
+
+    private static List<(long? Place, string? Name)> GetFrontierEntries(List<List<ElimBout>> rounds)
+    {
+        var last = rounds.Last();
+
+        if (rounds.Count < 2)
+            return last.Select(b => (b.WinnerPlace, GetWinnerName(b))).ToList();
+
+        var prev = rounds[^2];
+        var expectedCount = prev.Count / 2;
+
+        if (last.Count >= expectedCount)
+            return last.Select(b => (b.WinnerPlace, GetWinnerName(b))).ToList();
+
+        var existingByRightPlace = last
+            .Where(b => b.RightPlace.HasValue)
+            .ToDictionary(b => b.RightPlace!.Value);
+
+        var entries = new List<(long? Place, string? Name)>();
+        for (var i = 0; i + 1 < prev.Count; i += 2)
+        {
+            var boutA = prev[i];
+            var boutB = prev[i + 1];
+            var topPlace = (boutA.WinnerPlace ?? long.MaxValue) <= (boutB.WinnerPlace ?? long.MaxValue)
+                ? boutA.WinnerPlace
+                : boutB.WinnerPlace;
+
+            if (topPlace.HasValue && existingByRightPlace.TryGetValue(topPlace.Value, out var nextBout))
+                entries.Add((nextBout.WinnerPlace, GetWinnerName(nextBout)));
+            else
+                entries.Add((topPlace, null));
+        }
+        return entries;
+    }
+
+    public static string? GetWinnerName(ElimBout bout)
+    {
+        var id = bout.WinnerId;
+        if (id == null) return null;
+        if (id == bout.LeftId) return bout.Left.ToString();
+        if (id == bout.RightId) return bout.Right.ToString();
+        return null;
+    }
+
     private static (FencerBase Top, FencerBase Bot, long? TopPlace, long? BotPlace) OrderByPlace(ElimBout boutA, FencerBase winnerA, ElimBout boutB, FencerBase winnerB)
     {
         return (boutA.WinnerPlace ?? long.MaxValue) <= (boutB.WinnerPlace ?? long.MaxValue)
