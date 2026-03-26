@@ -1,5 +1,4 @@
 @using ClubLog.Core.Interfaces
-@using ClubLog.Core.Models
 @using ClubLog.Blazor.Common.Utils
 @using System.Text.Json
 @using System.Net.Http
@@ -119,7 +118,7 @@
         <MudButton StartIcon="@Icons.Material.Filled.PersonAdd" OnClick="OpenAddFencer">Add fencer</MudButton>
         <MudSpacer />
         <MudButton OnClick="Cancel">Cancel</MudButton>
-        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="TrySave">Save</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="TrySave" Disabled="_unassigned.Any()">Save</MudButton>
     </DialogActions>
 </MudDialog>
 
