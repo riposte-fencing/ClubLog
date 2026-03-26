@@ -22,6 +22,15 @@
             <button type="submit" style="display:none"/>
         </form>
 
+        <div style="height:40px; display:flex; align-items:center;" class="mt-2">
+            @foreach (var fencer in Suggestions)
+            {
+                <MudChip T="string" OnClick="() => SelectSuggestion(fencer)" Color="Color.Default" Variant="Variant.Outlined" Class="ma-1">
+                    @fencer.FirstName @fencer.LastName
+                </MudChip>
+            }
+        </div>
+
         <br/>
 
         <MudText Typo="Typo.h6" Class="mb-3">Rating info</MudText>
@@ -49,11 +58,28 @@
 
 @code {
     [CascadingParameter] private IMudDialogInstance MudDialog { get; set; }
+    [Parameter] public List<FencerBase> Fencers { get; set; }
     [Parameter] public EventCallback<FencerBase> OnSaved { get; set; }
 
     private FencerBase _fencer = new();
     private bool _lockClub = false;
     private MudTextField<string> _firstNameField;
+
+    private IEnumerable<FencerBase> Suggestions =>
+        string.IsNullOrWhiteSpace(_fencer.FirstName)
+            ? Enumerable.Empty<FencerBase>()
+            : Fencers.Where(f => f.FirstName != null && f.FirstName.StartsWith(_fencer.FirstName, StringComparison.OrdinalIgnoreCase)).Take(3);
+
+    private async Task SelectSuggestion(FencerBase fencer)
+    {
+        _fencer.FirstName = fencer.FirstName;
+        _fencer.LastName = fencer.LastName;
+        if (!_lockClub)
+        {
+            _fencer.ClubName = fencer.ClubName;
+        }
+        await _firstNameField.FocusAsync();
+    }
 
     private void OnKeyDown(KeyboardEventArgs e)
     {
@@ -69,8 +95,9 @@
         var clubName = _lockClub
             ? _fencer.ClubName
             : null;
+        Fencers.Add(_fencer);
         _fencer = new();
-        _fencer.ClubName = clubName;
+        _fencer.ClubName = clubName ?? "Unattached";
         StateHasChanged();
         await _firstNameField.FocusAsync();
     }

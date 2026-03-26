@@ -51,6 +51,15 @@
 @code {
     private string _eventName = string.Empty;
     private List<FencerBase> _fencers = new();
+    private List<FencerBase> _dbFencers = new();
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _dbFencers = await FencerRepo.GetFencers() ?? new();
+        }
+    }
 
     public async Task OpenPoolNumberDialog()
     {
@@ -74,6 +83,7 @@
     {
         var parameters = new DialogParameters
         {
+            { "Fencers", _dbFencers },
             { "OnSaved", EventCallback.Factory.Create<FencerBase>(this, AddFencer) }
         };
 
@@ -102,7 +112,8 @@
     private async Task AddFencer(FencerBase fencer)
     {
         _fencers.Add(fencer);
-        await FencerRepo.AddFencerAsync(fencer, _eventName);
+        await FencerRepo.AddFencer(fencer);
+        await FencerRepo.AddFencerToEvent(fencer, _eventName);
         StateHasChanged();
     }
 

@@ -5,35 +5,42 @@ namespace ClubLog.Blazor.Simple.BrowserRepositories;
 
 public class FencerRepository(ILocalStorageService localStorage)
 {
-    public async Task<FencerBase?> GetFencerAsync(Guid id)
+    public async Task<FencerBase?> GetFencerAsync(Guid id, string eventName)
     {
-        return (await GetFencersFromLocalStorage())?.FirstOrDefault(x => x.Id == id);
+        return (await GetFencersForEvent(eventName))?.FirstOrDefault(x => x.Id == id);
     }
 
-    public async Task<List<FencerBase>> GetFencersAsync(IEnumerable<Guid> ids)
+    public async Task AddFencerToEvent(FencerBase fencer, string eventName)
     {
-        throw new NotImplementedException();
-    }
-
-    public async Task AddFencerAsync(FencerBase fencer, string eventName)
-    {
-        var fencers = await GetFencersFromLocalStorage() ?? new();
+        var fencers = await GetFencersForEvent(eventName) ?? new();
         fencers.Add(fencer);
-        await localStorage.SetItemAsync($"{eventName}-event_fencers", fencer);
-    }
-
-    public Task DeleteFencerAsync(Guid id)
-    {
-        throw new NotImplementedException();
-    }
-
-    public Task UpdateFencerAsync(FencerBase updatedFencer)
-    {
-        throw new NotImplementedException();
+        await localStorage.SetItemAsync($"{eventName}-event_fencers", fencers);
     }
     
-    private async Task<List<FencerBase>?> GetFencersFromLocalStorage()
+    public async Task<List<FencerBase>?> GetFencers()
     {
-        return await localStorage.GetItemAsync<List<FencerBase>>("event_fencers");
+        if (!await localStorage.ContainKeyAsync("all_fencers"))
+        {
+            return new();
+        }
+        return await localStorage.GetItemAsync<List<FencerBase>>("all_fencers");
+    }
+
+    public async Task<bool> AddFencer(FencerBase fencer)
+    {
+        var fencers = await GetFencers() ?? new();
+        if (fencers.Any(x => x.Equals(fencer)))
+        {
+            return false;
+        }
+        
+        fencers.Add(fencer);
+        await localStorage.SetItemAsync("all_fencers", fencers);
+        return true;
+    }
+
+    private async Task<List<FencerBase>?> GetFencersForEvent(string eventName)
+    {
+        return await localStorage.GetItemAsync<List<FencerBase>>($"{eventName}-event_fencers");
     }
 }
