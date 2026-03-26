@@ -1,7 +1,7 @@
 {
   "mainAssemblyName": "ClubLog.Blazor.SimpleUI",
   "resources": {
-    "hash": "sha256-NyjAs/V2mZoHkbFdmIBUJxYZRZcto464+su1iuLHDgo=",
+    "hash": "sha256-VbXdtgN79MTg1g5BI1Ea0oq3Zz6n8CxyETNBGaOd4V8=",
     "fingerprinting": {
       "Azure.Core.92q6rqqhly.wasm": "Azure.Core.wasm",
       "Azure.Identity.lycxktzmme.wasm": "Azure.Identity.wasm",
@@ -36,7 +36,7 @@
       "Microsoft.JSInterop.qlhefq26pp.wasm": "Microsoft.JSInterop.wasm",
       "Microsoft.JSInterop.WebAssembly.j5m7jjhb9v.wasm": "Microsoft.JSInterop.WebAssembly.wasm",
       "Microsoft.SqlServer.Server.yamodpu5qp.wasm": "Microsoft.SqlServer.Server.wasm",
-      "MudBlazor.ixgi8camy3.wasm": "MudBlazor.wasm",
+      "MudBlazor.cq73hy6w1r.wasm": "MudBlazor.wasm",
       "Serilog.q0zfl4jbpj.wasm": "Serilog.wasm",
       "System.ClientModel.8j5eiu0uyl.wasm": "System.ClientModel.wasm",
       "System.Configuration.ConfigurationManager.50p01uimie.wasm": "System.Configuration.ConfigurationManager.wasm",
@@ -116,9 +116,9 @@
       "System.dqfxtvioy0.wasm": "System.wasm",
       "netstandard.q6fucz7fh1.wasm": "netstandard.wasm",
       "System.Private.CoreLib.xpvvu4nes9.wasm": "System.Private.CoreLib.wasm",
-      "ClubLog.Blazor.Common.p8gxahtwvy.wasm": "ClubLog.Blazor.Common.wasm",
-      "ClubLog.Core.wllfugpk5j.wasm": "ClubLog.Core.wasm",
-      "ClubLog.Blazor.SimpleUI.ugwr6d6j3m.wasm": "ClubLog.Blazor.SimpleUI.wasm",
+      "ClubLog.Blazor.Common.oga8kiqjkj.wasm": "ClubLog.Blazor.Common.wasm",
+      "ClubLog.Core.8n61v7xsws.wasm": "ClubLog.Core.wasm",
+      "ClubLog.Blazor.SimpleUI.0mbx2a6spl.wasm": "ClubLog.Blazor.SimpleUI.wasm",
       "Microsoft.Data.SqlClient.resources.ldvhv1o9jg.wasm": "Microsoft.Data.SqlClient.resources.wasm",
       "Microsoft.Data.SqlClient.resources.kol4x9y613.wasm": "Microsoft.Data.SqlClient.resources.wasm",
       "Microsoft.Data.SqlClient.resources.fmvju5ersa.wasm": "Microsoft.Data.SqlClient.resources.wasm",
@@ -189,7 +189,7 @@
       "Microsoft.JSInterop.qlhefq26pp.wasm": "sha256-Yvj/xHVikAWJL+g5+luS9ZjXVJZXA67r2ab2uBD5TBE=",
       "Microsoft.JSInterop.WebAssembly.j5m7jjhb9v.wasm": "sha256-GaWH3/h+jMiywp+g7vt6i3wRVl+RkH+TV4HWg12yYXM=",
       "Microsoft.SqlServer.Server.yamodpu5qp.wasm": "sha256-Fig+5hq00gGQlXAgSnyFlUlWyhlx9f+yPJb4INt3gNc=",
-      "MudBlazor.ixgi8camy3.wasm": "sha256-Nv43L0/bKhV7DLvP6n9IJw3i/U1Ic5zGz/F5HYhNRtM=",
+      "MudBlazor.cq73hy6w1r.wasm": "sha256-5CJ/VySgr3IOhIs55uxZea0vLHVfgv7/xmJDClyDRcg=",
       "Serilog.q0zfl4jbpj.wasm": "sha256-9usvtBNBUFPTDJV30N1o9PjtQQzkeFwJmw9m8wCMvQc=",
       "System.ClientModel.8j5eiu0uyl.wasm": "sha256-hB3YvRqtJh9HC69ryOu2jplvTqYa8opx1wPk+N/txKs=",
       "System.Configuration.ConfigurationManager.50p01uimie.wasm": "sha256-awi0DdRMBQr2w3YJtU9l+nQSH2MH5AsDPHbXPa4qWO8=",
@@ -267,9 +267,9 @@
       "System.Xml.XmlSerializer.ynxm52aga2.wasm": "sha256-Ep8tgfR1YwXMBSjHSOoKlKJ8CkqQVUdM7Ft8Uw6npJ0=",
       "System.dqfxtvioy0.wasm": "sha256-5QZAjy4n7513fYxCXSXTsAkUmRsLiZ8m621Ot4k7FB0=",
       "netstandard.q6fucz7fh1.wasm": "sha256-ni+eNbtQ7tTG+t18laHnGSRalckYKXeYTkgLnTs5ZMU=",
-      "ClubLog.Blazor.Common.p8gxahtwvy.wasm": "sha256-ec6wef3TvJ1i+I81nwsiDUl4MAwkDAnTHOEO454Xeos=",
-      "ClubLog.Core.wllfugpk5j.wasm": "sha256-3DZj4CidWZWzzVW4+iLvTp6rM8cJRqJfWWIGctMRih8=",
-      "ClubLog.Blazor.SimpleUI.ugwr6d6j3m.wasm": "sha256-4ujjVKHVbTDhaxJB9iwO+sYNRAR4HaNGPGEC3Sb/YsU="
+      "ClubLog.Blazor.Common.oga8kiqjkj.wasm": "sha256-CJ0D+4sb4C2nfuWMexxtRadD+ZgE4ggYI3R6t+QMM40=",
+      "ClubLog.Core.8n61v7xsws.wasm": "sha256-5OIV8SHK+KRJv0g1J+m3ZQusfRa0idLzECVNZm+z0eY=",
+      "ClubLog.Blazor.SimpleUI.0mbx2a6spl.wasm": "sha256-+Dyk17xOZIPUSChlbS7+MogIUDYBRr47CG3pCS5+fe8="
     },
     "satelliteResources": {
       "de": {
