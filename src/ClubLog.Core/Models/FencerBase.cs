@@ -17,4 +17,12 @@ public class FencerBase
     {
         return $"{FirstName} {LastName}";
     }
+
+    public override bool Equals(object? obj)
+    {
+        return obj is FencerBase fencer &&
+               fencer.FirstName.Equals(FirstName, StringComparison.InvariantCultureIgnoreCase) &&
+               fencer.LastName.Equals(LastName, StringComparison.InvariantCultureIgnoreCase) &&
+               fencer.ClubName.Equals(ClubName, StringComparison.InvariantCultureIgnoreCase);
+    }
 }

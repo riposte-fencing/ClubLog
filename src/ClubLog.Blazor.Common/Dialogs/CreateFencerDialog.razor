@@ -1,20 +1,35 @@
-﻿@using ClubLog.Core.Models
+@using ClubLog.Core.Models
 
 <MudDialog>
     <DialogContent>
         <MudText Typo="Typo.h6" Class="mb-3">Basic info</MudText>
 
-        <MudGrid>
-            <MudItem xs="12" md="4">
-                <MudTextField @bind-Value="_fencer.FirstName" Label="First name"/>
-            </MudItem>
-            <MudItem xs="12" md="4">
-                <MudTextField @bind-Value="_fencer.LastName" Label="Last name"/>
-            </MudItem>
-            <MudItem xs="12" md="4">
-                <MudTextField @bind-Value="_fencer.ClubName" Label="Club"/>
-            </MudItem>
-        </MudGrid>
+        <form @onsubmit="Save" @onsubmit:preventDefault="true" @onkeydown="OnKeyDown" @onkeydown:preventDefault="false">
+            <MudGrid>
+                <MudItem xs="12" md="4">
+                    <MudTextField @ref="_firstNameField" @bind-Value="_fencer.FirstName" Label="First name" Immediate="true"/>
+                </MudItem>
+                <MudItem xs="12" md="4">
+                    <MudTextField @bind-Value="_fencer.LastName" Label="Last name" Immediate="true"/>
+                </MudItem>
+                <MudItem xs="12" md="4">
+                    <MudTextField @bind-Value="_fencer.ClubName" Label="Club" Immediate="true"
+                                  Adornment="Adornment.End"
+                                  AdornmentIcon="@(_lockClub ? Icons.Material.Filled.Lock : Icons.Material.Filled.LockOpen)"
+                                  OnAdornmentClick="() => _lockClub = !_lockClub"/>
+                </MudItem>
+            </MudGrid>
+            <button type="submit" style="display:none"/>
+        </form>
+
+        <div style="height:40px; display:flex; align-items:center;" class="mt-2">
+            @foreach (var fencer in Suggestions)
+            {
+                <MudChip T="string" OnClick="() => SelectSuggestion(fencer)" Color="Color.Default" Variant="Variant.Outlined" Class="ma-1">
+                    @fencer.FirstName @fencer.LastName
+                </MudChip>
+            }
+        </div>
 
         <br/>
 
@@ -43,17 +58,50 @@
 
 @code {
     [CascadingParameter] private IMudDialogInstance MudDialog { get; set; }
+    [Parameter] public List<FencerBase> Fencers { get; set; }
     [Parameter] public EventCallback<FencerBase> OnSaved { get; set; }
 
     private FencerBase _fencer = new();
+    private bool _lockClub = false;
+    private MudTextField<string> _firstNameField;
+
+    private IEnumerable<FencerBase> Suggestions =>
+        string.IsNullOrWhiteSpace(_fencer.FirstName)
+            ? Enumerable.Empty<FencerBase>()
+            : Fencers.Where(f => f.FirstName != null && f.FirstName.StartsWith(_fencer.FirstName, StringComparison.OrdinalIgnoreCase)).Take(3);
+
+    private async Task SelectSuggestion(FencerBase fencer)
+    {
+        _fencer.FirstName = fencer.FirstName;
+        _fencer.LastName = fencer.LastName;
+        if (!_lockClub)
+        {
+            _fencer.ClubName = fencer.ClubName;
+        }
+        await _firstNameField.FocusAsync();
+    }
+
+    private void OnKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape")
+        {
+            MudDialog.Close();
+        }
+    }
 
     public async Task Save()
     {
         await OnSaved.InvokeAsync(_fencer);
+        var clubName = _lockClub
+            ? _fencer.ClubName
+            : null;
+        Fencers.Add(_fencer);
         _fencer = new();
+        _fencer.ClubName = clubName ?? "Unattached";
         StateHasChanged();
+        await _firstNameField.FocusAsync();
     }
-    
+
     public async Task Submit()
     {
         await Save();
