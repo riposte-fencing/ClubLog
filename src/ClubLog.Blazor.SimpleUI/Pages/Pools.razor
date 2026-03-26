@@ -26,7 +26,14 @@
         />
     </MudContainer>
     <br/>
-    <div class="d-flex justify-center">
+    <div class="d-flex justify-center gap-4">
+        <MudButton
+            Color="Color.Primary"
+            Variant="Variant.Filled"
+            Size="Size.Large"
+            OnClick="OpenEditPools">
+            Edit pools
+        </MudButton>
         <MudButton
             Color="Color.Success"
             Variant="Variant.Filled"
@@ -61,6 +68,39 @@
     private async Task UpdatePool(Pool pool)
     {
         await PoolRepo.UpdatePool(pool);
+    }
+
+    private async Task OpenEditPools()
+    {
+        var parameters = new DialogParameters
+        {
+            { "Pools", _pools },
+            { "OnSave", EventCallback.Factory.Create<List<Pool>>(this, SaveEditedPools) },
+        };
+        var options = new DialogOptions
+        {
+            MaxWidth = MaxWidth.ExtraExtraLarge,
+            FullWidth = true,
+            CloseButton = true,
+        };
+        
+        var dialog = await DialogService.ShowAsync<EditPoolsDialog>("Edit Pools", parameters, options);
+        await dialog.Result;
+    }
+
+    private async Task SaveEditedPools(List<Pool> updatedPools)
+    {
+        _pools = updatedPools;
+        foreach (var p in _pools)
+        {
+            foreach (var f in p.Fencers)
+            {
+                f.Stats.Opponents = p.Fencers.Count - 1;
+            }
+            await PoolRepo.UpdatePool(p);
+        }
+        _selected = 1;
+        StateHasChanged();
     }
 
     private async Task Finish()

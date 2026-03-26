@@ -1,0 +1,251 @@
+@using ClubLog.Core.Interfaces
+@using ClubLog.Core.Models
+@using ClubLog.Blazor.Common.Utils
+@using System.Text.Json
+@using System.Net.Http
+
+@inject IPoolService PoolService
+@inject HttpClient Http
+@inject IDialogService DialogService
+
+<style>
+    .edit-pools-container {
+        display: flex;
+        gap: 16px;
+        overflow-x: auto;
+        height: calc(100vh - 180px);
+        padding: 8px 4px;
+    }
+
+    .edit-pool-column {
+        min-width: 200px;
+        flex-shrink: 0;
+        border: 2px solid var(--mud-palette-lines-default);
+        border-radius: 8px;
+        padding: 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        background-color: var(--mud-palette-surface);
+        transition: border-color 0.15s;
+    }
+
+    .edit-pool-column.drop-active {
+        border-color: var(--mud-palette-primary);
+        background-color: var(--mud-palette-primary-lighten);
+    }
+
+    .edit-pool-column-header {
+        font-weight: 600;
+        padding-bottom: 8px;
+        border-bottom: 1px solid var(--mud-palette-lines-default);
+        text-align: center;
+    }
+
+    .edit-pool-fencer-card {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 6px 8px;
+        border-radius: 6px;
+        background-color: var(--mud-palette-background);
+        border: 1px solid var(--mud-palette-lines-default);
+        cursor: grab;
+        user-select: none;
+    }
+
+    .edit-pool-fencer-card:active {
+        cursor: grabbing;
+    }
+
+    .edit-pool-fencer-card.dragging {
+        opacity: 0.4;
+    }
+</style>
+
+<MudDialog>
+    <DialogContent>
+        <div class="edit-pools-container">
+            <div class="edit-pool-column @(_dropTarget == _unassignedKey ? "drop-active" : "")"
+                 @ondragover="@(() => _dropTarget = _unassignedKey)"
+                 @ondragover:preventDefault
+                 @ondrop="@(() => Drop(_unassignedKey))">
+                <MudText Typo="Typo.subtitle1" Class="edit-pool-column-header">Unassigned</MudText>
+                @foreach (var fencer in _unassigned)
+                {
+                    var f = fencer;
+                    <div class="edit-pool-fencer-card @(_dragging == f ? "dragging" : "")"
+                         draggable="true"
+                         @ondragstart="@(() => StartDrag(f, _unassignedKey))">
+                        <span>@f.FirstName @f.LastName</span>
+                    </div>
+                }
+            </div>
+
+            @for (var i = 0; i < _editablePools.Count; i++)
+            {
+                var pool = _editablePools[i];
+                var poolKey = pool.PoolId.ToString();
+                var poolNum = i + 1;
+                
+                <div class="edit-pool-column @(_dropTarget == poolKey ? "drop-active" : "")"
+                     @ondragover="@(() => _dropTarget = poolKey)"
+                     @ondragover:preventDefault
+                     @ondrop="@(() => Drop(poolKey))">
+                    
+                    <MudText Typo="Typo.subtitle1" Class="edit-pool-column-header">
+                        @($"Pool {poolNum}")
+                    </MudText>
+
+                    <MudText Typo="Typo.subtitle1" Class="edit-pool-column-header">@pool.PoolName</MudText>
+                    @foreach (var fencer in pool.Fencers)
+                    {
+                        var f = fencer;
+                        <div class="edit-pool-fencer-card @(_dragging == f ? "dragging" : "")"
+                             draggable="true"
+                             @ondragstart="@(() => StartDrag(f, poolKey))">
+                            <span>@f.FirstName @f.LastName</span>
+                            <MudIconButton
+                                Icon="@Icons.Material.Filled.Close"
+                                Size="Size.Small"
+                                OnClick="@(() => RemoveFencer(f, poolKey))"/>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    </DialogContent>
+    <DialogActions>
+        <MudButton StartIcon="@Icons.Material.Filled.PersonAdd" OnClick="OpenAddFencer">Add fencer</MudButton>
+        <MudSpacer />
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="TrySave">Save</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; }
+    [Parameter] public required List<Pool> Pools { get; set; }
+    [Parameter] public required EventCallback<List<Pool>> OnSave { get; set; }
+
+    private static readonly string _unassignedKey = "__unassigned__";
+
+    private List<Pool> _editablePools = new();
+    private List<FencerWithStats> _unassigned = new();
+
+    private FencerWithStats? _dragging;
+    private string? _draggingFrom;
+    private string? _dropTarget;
+
+    protected override void OnParametersSet()
+    {
+        var json = JsonSerializer.Serialize(Pools);
+        _editablePools = JsonSerializer.Deserialize<List<Pool>>(json) ?? new();
+    }
+
+    private void StartDrag(FencerWithStats fencer, string fromKey)
+    {
+        _dragging = fencer;
+        _draggingFrom = fromKey;
+    }
+
+    private void Drop(string targetKey)
+    {
+        _dropTarget = null;
+
+        if (_dragging is null || _draggingFrom is null)
+        {
+            return;
+        }
+
+        if (_draggingFrom == targetKey)
+        {
+            _dragging = null;
+            _draggingFrom = null;
+            return;
+        }
+
+        if (_draggingFrom == _unassignedKey)
+        {
+            _unassigned.Remove(_dragging);
+        }
+        else
+        {
+            var source = _editablePools.FirstOrDefault(p => p.PoolId.ToString() == _draggingFrom);
+            source?.Fencers.Remove(_dragging);
+        }
+
+        if (targetKey == _unassignedKey)
+        {
+            _unassigned.Add(_dragging);
+        }
+        else
+        {
+            var target = _editablePools.FirstOrDefault(p => p.PoolId.ToString() == targetKey);
+            target?.Fencers.Add(_dragging);
+        }
+
+        _dragging = null;
+        _draggingFrom = null;
+    }
+
+    private void RemoveFencer(FencerWithStats fencer, string poolKey)
+    {
+        var pool = _editablePools.FirstOrDefault(p => p.PoolId.ToString() == poolKey);
+        if (pool is not null)
+        {
+            pool.Fencers.Remove(fencer);
+            _unassigned.Add(fencer);
+        }
+    }
+
+    private async Task OpenAddFencer()
+    {
+        var parameters = new DialogParameters
+        {
+            { "OnSaved", EventCallback.Factory.Create<FencerBase>(this, AddFencer) },
+        };
+        await DialogService.ShowAsync<CreateFencerDialog>("Add fencer", parameters);
+    }
+
+    private void AddFencer(FencerBase fencer)
+    {
+        _unassigned.Add(new FencerWithStats(fencer, 0));
+    }
+
+    private void Cancel() => MudDialog.Close();
+
+    private async Task TrySave()
+    {
+        var confirmed = await DialogService.ShowMessageBox(
+            "Warning",
+            "Saving will reset all existing scores in the pools. Continue?",
+            yesText: "Yes, reset scores",
+            cancelText: "Cancel");
+
+        if (confirmed != true)
+        {
+            return;
+        }
+
+        var orders = await DataGrabber.Grab<Dictionary<int, List<BoutPair>>>(Http, "bout_order.json");
+
+        foreach (var pool in _editablePools)
+        {
+            pool.BoutsForFencers.Clear();
+            if (pool.Fencers.Count >= 2)
+            {
+                PoolService.CreateBoutsForPool(pool, orders);
+            }
+            else
+            {
+                pool.Bouts.Clear();
+            }
+        }
+
+        await OnSave.InvokeAsync(_editablePools);
+        MudDialog.Close();
+    }
+
+}

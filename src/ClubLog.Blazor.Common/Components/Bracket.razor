@@ -1,5 +1,9 @@
 ﻿@using ClubLog.Blazor.Common.Dialogs
+@using ClubLog.Core.Interfaces
+@using ClubLog.Core.Models
+@using static ClubLog.Core.Services.ElimService
 @inject IDialogService DialogService
+@inject IElimService ElimService
 
 @* Note: A lot of this file was written by Claude. This FE logic and styling was wacky for my BE brain. *@
 
@@ -20,7 +24,7 @@
         {
             var k = roundIdx;
             var paddingTop = k == 0 ? 0 : (int)((BoutCardHeight + RoundGap) / 2.0 * (Math.Pow(2, k) - 1));
-            var boutGap    = k == 0 ? RoundGap : (int)((BoutCardHeight + RoundGap) * Math.Pow(2, k) - BoutCardHeight);
+            var boutGap = k == 0 ? RoundGap : (int)((BoutCardHeight + RoundGap) * Math.Pow(2, k) - BoutCardHeight);
 
             <div class="d-flex flex-column" style="gap: @(boutGap)px; padding-top: @(paddingTop)px;">
                 @foreach (var slot in GetRoundSlots(k))
@@ -62,6 +66,10 @@
                             {
                                 <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" OnClick="() => EditBout(bout)"/>
                             }
+                            @if (IsFinalBout(k, bout))
+                            {
+                                <MudButton Color="Color.Success" Variant="Variant.Filled" OnClick="() => OnFinalResults.InvokeAsync()">Final Results</MudButton>
+                            }
                         </div>
                     }
                     else
@@ -89,7 +97,7 @@
             var round = _derivedRounds[roundIdx];
             var k = Rounds.Count + roundIdx;
             var paddingTop = (int)((BoutCardHeight + RoundGap) / 2.0 * (Math.Pow(2, k) - 1));
-            var boutGap    = (int)((BoutCardHeight + RoundGap) * Math.Pow(2, k) - BoutCardHeight);
+            var boutGap = (int)((BoutCardHeight + RoundGap) * Math.Pow(2, k) - BoutCardHeight);
 
             <div class="d-flex flex-column" style="gap: @(boutGap)px; padding-top: @(paddingTop)px;">
                 @foreach (var slot in round)
@@ -127,81 +135,15 @@
 
     [Parameter] public required List<List<ElimBout>> Rounds { get; set; }
     [Parameter] public EventCallback<ElimBout> OnBoutUpdate { get; set; }
-
-    private record BracketSlot(long? TopPlace, string? TopName, long? BottomPlace, string? BottomName);
+    [Parameter] public EventCallback OnFinalResults { get; set; }
 
     private List<List<BracketSlot>> _derivedRounds = new();
     private List<string> _roundLabels = new();
 
     protected override void OnParametersSet()
     {
-        _derivedRounds = ComputeDerivedRounds();
-        _roundLabels   = ComputeRoundLabels();
-    }
-
-    private List<List<BracketSlot>> ComputeDerivedRounds()
-    {
-        if (Rounds.Count == 0) return new();
-
-        var result  = new List<List<BracketSlot>>();
-        var entries = GetFrontierEntries();
-
-        while (entries.Count >= 2)
-        {
-            var round = new List<BracketSlot>();
-            for (var i = 0; i + 1 < entries.Count; i += 2)
-                round.Add(new BracketSlot(entries[i].Place, entries[i].Name, entries[i + 1].Place, entries[i + 1].Name));
-            result.Add(round);
-            entries = round.Select(s => (Place: s.TopPlace, Name: (string?)null)).ToList();
-        }
-
-        return result;
-    }
-
-    // Returns the "frontier" entries used to project derived TBD rounds.
-    // When the last stored round is only partially populated (some pairs not yet advanced), gaps are filled with TBD
-    // entries derived from the previous round.
-    private List<(long? Place, string? Name)> GetFrontierEntries()
-    {
-        var last = Rounds.Last();
-
-        if (Rounds.Count < 2)
-        {
-            return last.Select(b => (b.WinnerPlace, GetWinnerName(b))).ToList();
-        }
-
-        var prev = Rounds[^2];
-        var expectedCount = prev.Count / 2;
-
-        // Last round is full - use it directly
-        if (last.Count >= expectedCount)
-        {
-            return last.Select(b => (b.WinnerPlace, GetWinnerName(b))).ToList();
-        }
-
-        // Last round is partial: scan the previous round pair-by-pair and fill gaps
-        var existingByRightPlace = last
-            .Where(b => b.RightPlace.HasValue)
-            .ToDictionary(b => b.RightPlace!.Value);
-
-        var entries = new List<(long? Place, string? Name)>();
-        for (var i = 0; i + 1 < prev.Count; i += 2)
-        {
-            var boutA  = prev[i];
-            var boutB  = prev[i + 1];
-            var aIsTop = (boutA.WinnerPlace ?? long.MaxValue) <= (boutB.WinnerPlace ?? long.MaxValue);
-            var topPlace = aIsTop ? boutA.WinnerPlace : boutB.WinnerPlace;
-
-            if (topPlace.HasValue && existingByRightPlace.TryGetValue(topPlace.Value, out var nextBout))
-            {
-                entries.Add((nextBout.WinnerPlace, GetWinnerName(nextBout)));
-            }
-            else
-            {
-                entries.Add((topPlace, null)); // pair not yet completed — show as TBD
-            }
-        }
-        return entries;
+        _derivedRounds = ElimService.GetDerivedRounds(Rounds);
+        _roundLabels = ElimService.GetRoundLabels(Rounds, _derivedRounds.Count);
     }
 
     // Returns slots for a round in bracket order. For partial rounds (where only some
@@ -228,11 +170,11 @@
         var slots = new List<RoundSlot>();
         for (var i = 0; i + 1 < prev.Count; i += 2)
         {
-            var boutA    = prev[i];
-            var boutB    = prev[i + 1];
-            var aIsTop   = (boutA.WinnerPlace ?? long.MaxValue) <= (boutB.WinnerPlace ?? long.MaxValue);
-            var topPlace = aIsTop ? boutA.WinnerPlace : boutB.WinnerPlace;
-            var botPlace = aIsTop ? boutB.WinnerPlace : boutA.WinnerPlace;
+            var (topBout, botBout) = (prev[i].WinnerPlace ?? long.MaxValue) <= (prev[i + 1].WinnerPlace ?? long.MaxValue)
+                ? (prev[i], prev[i + 1])
+                : (prev[i + 1], prev[i]);
+            var topPlace = topBout.WinnerPlace;
+            var botPlace = botBout.WinnerPlace;
 
             if (topPlace.HasValue && byRightPlace.TryGetValue(topPlace.Value, out var existing))
             {
@@ -240,41 +182,10 @@
             }
             else
             {
-                var topBout = aIsTop ? boutA : boutB;
-                var botBout = aIsTop ? boutB : boutA;
                 slots.Add(new RoundSlot(null, topPlace, botPlace, GetWinnerName(topBout), GetWinnerName(botBout)));
             }
         }
         return slots;
-    }
-
-    private static string? GetWinnerName(ElimBout bout)
-    {
-        var id = bout.WinnerId;
-        if (id == null) return null;
-        if (id == bout.LeftId) return bout.Left.ToString();
-        if (id == bout.RightId) return bout.Right.ToString();
-        return null;
-    }
-
-    private List<string> ComputeRoundLabels()
-    {
-        if (Rounds.Count == 0)
-        {
-            return new();
-        }
-        
-        var labels = new List<string>();
-        var bracketSize = Rounds[0].Count * 2;
-        var totalRounds = Rounds.Count + _derivedRounds.Count;
-
-        for (var i = 0; i < totalRounds; i++)
-        {
-            var size = bracketSize / (int)Math.Pow(2, i);
-            labels.Add(size == 2 ? "Final" : $"Round of {size}");
-        }
-
-        return labels;
     }
 
     private async Task EditBout(ElimBout bout)
@@ -285,12 +196,12 @@
 
         if (result is { Canceled: false })
         {
-            _derivedRounds = ComputeDerivedRounds();
+            _derivedRounds = ElimService.GetDerivedRounds(Rounds);
             await OnBoutUpdate.InvokeAsync(bout);
             StateHasChanged();
         }
     }
 
     private record RoundSlot(ElimBout? Bout, long? TopPlace, long? BottomPlace, string? TopName = null, string? BottomName = null);
-
+    private bool IsFinalBout(int roundIdx, ElimBout bout) => roundIdx == Rounds.Count - 1 && Rounds[roundIdx].Count == 1 && bout.WinnerId.HasValue;
 }
