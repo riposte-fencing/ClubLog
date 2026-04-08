@@ -116,6 +116,7 @@
     </DialogContent>
     <DialogActions>
         <MudButton StartIcon="@Icons.Material.Filled.PersonAdd" OnClick="OpenAddFencer">Add fencer</MudButton>
+        <MudButton StartIcon="@Icons.Material.Filled.AddChart" OnClick="AddPool">Add fencer</MudButton>
         <MudSpacer />
         <MudButton OnClick="Cancel">Cancel</MudButton>
         <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="TrySave" Disabled="_unassigned.Any()">Save</MudButton>
@@ -247,4 +248,10 @@
         MudDialog.Close();
     }
 
+    private void AddPool()
+    {
+        var p = new Pool();
+        Pools.Add(p);
+        _editablePools.Add(p);
+    }
 }
