@@ -1,7 +1,7 @@
 {
   "mainAssemblyName": "ClubLog.Blazor.SimpleUI",
   "resources": {
-    "hash": "sha256-VbXdtgN79MTg1g5BI1Ea0oq3Zz6n8CxyETNBGaOd4V8=",
+    "hash": "sha256-7gjxIXPDaC1J9qJ3T8lsYXCABxB2aoxP4J5yoIJF0q8=",
     "fingerprinting": {
       "Azure.Core.92q6rqqhly.wasm": "Azure.Core.wasm",
       "Azure.Identity.lycxktzmme.wasm": "Azure.Identity.wasm",
@@ -116,9 +116,9 @@
       "System.dqfxtvioy0.wasm": "System.wasm",
       "netstandard.q6fucz7fh1.wasm": "netstandard.wasm",
       "System.Private.CoreLib.xpvvu4nes9.wasm": "System.Private.CoreLib.wasm",
-      "ClubLog.Blazor.Common.oga8kiqjkj.wasm": "ClubLog.Blazor.Common.wasm",
-      "ClubLog.Core.8n61v7xsws.wasm": "ClubLog.Core.wasm",
-      "ClubLog.Blazor.SimpleUI.0mbx2a6spl.wasm": "ClubLog.Blazor.SimpleUI.wasm",
+      "ClubLog.Blazor.Common.cqc1ksphby.wasm": "ClubLog.Blazor.Common.wasm",
+      "ClubLog.Core.o2j9bmn8ln.wasm": "ClubLog.Core.wasm",
+      "ClubLog.Blazor.SimpleUI.nne3zc9j7i.wasm": "ClubLog.Blazor.SimpleUI.wasm",
       "Microsoft.Data.SqlClient.resources.ldvhv1o9jg.wasm": "Microsoft.Data.SqlClient.resources.wasm",
       "Microsoft.Data.SqlClient.resources.kol4x9y613.wasm": "Microsoft.Data.SqlClient.resources.wasm",
       "Microsoft.Data.SqlClient.resources.fmvju5ersa.wasm": "Microsoft.Data.SqlClient.resources.wasm",
@@ -267,9 +267,9 @@
       "System.Xml.XmlSerializer.ynxm52aga2.wasm": "sha256-Ep8tgfR1YwXMBSjHSOoKlKJ8CkqQVUdM7Ft8Uw6npJ0=",
       "System.dqfxtvioy0.wasm": "sha256-5QZAjy4n7513fYxCXSXTsAkUmRsLiZ8m621Ot4k7FB0=",
       "netstandard.q6fucz7fh1.wasm": "sha256-ni+eNbtQ7tTG+t18laHnGSRalckYKXeYTkgLnTs5ZMU=",
-      "ClubLog.Blazor.Common.oga8kiqjkj.wasm": "sha256-CJ0D+4sb4C2nfuWMexxtRadD+ZgE4ggYI3R6t+QMM40=",
-      "ClubLog.Core.8n61v7xsws.wasm": "sha256-5OIV8SHK+KRJv0g1J+m3ZQusfRa0idLzECVNZm+z0eY=",
-      "ClubLog.Blazor.SimpleUI.0mbx2a6spl.wasm": "sha256-+Dyk17xOZIPUSChlbS7+MogIUDYBRr47CG3pCS5+fe8="
+      "ClubLog.Blazor.Common.cqc1ksphby.wasm": "sha256-TLWGxHVU+LOpqE9kumTclYK9aKuC985Dt4qu7WvDjJ8=",
+      "ClubLog.Core.o2j9bmn8ln.wasm": "sha256-0DuYoyfGhw07ydZ0Oavrfaj9qN5LVg6JEsyVNQq/9r4=",
+      "ClubLog.Blazor.SimpleUI.nne3zc9j7i.wasm": "sha256-82/otYsNtx1u8pws4DLGtdCmKXYOHphwstskJtXqJDw="
     },
     "satelliteResources": {
       "de": {
