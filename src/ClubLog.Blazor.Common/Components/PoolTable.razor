@@ -1,7 +1,11 @@
 ﻿@using ClubLog.Blazor.Common.Dialogs
 @using ClubLog.Core.Utils
+@using Microsoft.JSInterop
+
+@implements IAsyncDisposable
 
 @inject IDialogService DialogService
+@inject IJSRuntime JS
 
 <div class="d-flex justify-center fix-problems-container">
     @if (_problems.Any())
@@ -88,14 +92,15 @@
                                 ? "score-winner" : isComplete && bout.WinnerId is not null
                                     ? "score-loser" : isComplete && bout.WinnerId is null
                                         ? "score-problem" : "";
+                        var cellId = $"pool-cell-{Pool.PoolId}-{i}-{j}";
 
                         <td>
-                            <div class="score-indicator @scoreClass">
+                            <div id="@cellId" class="score-indicator pool-score-cell @scoreClass">
                                 <MudInput
                                     class="center-text square"
                                     T="int?"
                                     Value="value"
-                                    ValueChanged="async v => await UpdateBout(bout, v, right, leftFencer, rightFencer)"
+                                    ValueChanged="async v => await UpdateBout(bout, v, right, leftFencer, rightFencer, cellId)"
                                     Immediate="true"/>
                             </div>
                         </td>
@@ -125,6 +130,20 @@
     [Parameter] public EventCallback<Pool> OnUpdate { get; set; }
 
     private List<DetailedBout> _problems { get; set; } = new();
+    private IJSObjectReference? _jsModule;
+
+    private async Task<IJSObjectReference> GetModule()
+    {
+        return _jsModule ??= await JS.InvokeAsync<IJSObjectReference>("import", "./_content/ClubLog.Blazor.Common/Components/PoolTable.razor.js");
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_jsModule is not null)
+        {
+            await _jsModule.DisposeAsync();
+        }
+    }
 
     protected override void OnParametersSet()
     {
@@ -137,7 +156,7 @@
             .ToList();
     }
 
-    public async Task UpdateBout(BoutBase bout, int? score, bool isRight, FencerBase left, FencerBase right)
+    public async Task UpdateBout(BoutBase bout, int? score, bool isRight, FencerBase left, FencerBase right, string cellId)
     {
         if (isRight)
         {
@@ -157,6 +176,12 @@
         }
 
         await OnUpdate.InvokeAsync(Pool);
+
+        if (score is >= 0 and <= 9)
+        {
+            var module = await GetModule();
+            await module.InvokeVoidAsync("focusNextCell", cellId);
+        }
     }
 
     private async Task OpenProblemDialog()
