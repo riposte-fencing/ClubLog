@@ -14,4 +14,5 @@ public interface IElimService
     List<ElimBout> CascadeWinners(List<List<ElimBout>> rounds, int roundIndex, int boutIndex);
     List<string> GetRoundLabels(List<List<ElimBout>> rounds, int derivedRoundCount);
     List<List<BracketSlot>> GetDerivedRounds(List<List<ElimBout>> rounds);
+    List<FencerWithStats> GetFinalStandings(List<List<ElimBout>> rounds);
 }

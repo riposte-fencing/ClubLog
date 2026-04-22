@@ -5,8 +5,9 @@
 
 @inject ElimRepository ElimRepo
 @inject IElimService ElimService
+@inject IDialogService DialogService
 
-<Bracket Rounds="_rounds" OnBoutUpdate="UpdateBout"/>
+<Bracket Rounds="_rounds" OnBoutUpdate="UpdateBout" OnFinalResults="ShowFinalResults"/>
 
 @code {
     [Parameter] public required string EventName { get; set; }
@@ -54,5 +55,12 @@
 
         existingNextRound.AddRange(toAdd);
         ElimService.SortNextRound(currentRound, existingNextRound);
+    }
+
+    private async Task ShowFinalResults()
+    {
+        var standings = ElimService.GetFinalStandings(_rounds);
+        var parameters = new DialogParameters { { "Results", standings } };
+        await DialogService.ShowAsync<ResultsDialog>("Final Standings", parameters);
     }
 }

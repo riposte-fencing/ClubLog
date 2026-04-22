@@ -373,6 +373,62 @@ public class ElimService : IElimService
         return entries;
     }
 
+    public List<FencerWithStats> GetFinalStandings(List<List<ElimBout>> rounds)
+    {
+        var standings = new List<FencerWithStats>();
+        if (rounds.Count == 0)
+        {
+            return standings;
+        }
+
+        var finalBout = rounds.Last()[0];
+        if (finalBout.WinnerId.HasValue)
+        {
+            var winner = finalBout.WinnerId == finalBout.RightId
+                ? finalBout.Right
+                : finalBout.Left;
+            standings.Add(ToStanding(winner, 1, "1"));
+        }
+
+        for (var r = rounds.Count - 1; r >= 0; r--)
+        {
+            var round = rounds[r];
+            var loserPlace = round.Count + 1;
+            var losers = new List<FencerBase>();
+
+            foreach (var bout in round)
+            {
+                if (!bout.WinnerId.HasValue)
+                {
+                    continue;
+                }
+
+                var loserId = bout.WinnerId == bout.RightId
+                    ? bout.LeftId
+                    : bout.RightId;
+                if (loserId == Guid.Empty)
+                {
+                    continue;
+                }
+
+                losers.Add(bout.WinnerId == bout.RightId
+                    ? bout.Left
+                    : bout.Right);
+            }
+
+            var placeStr = losers.Count > 1
+                ? $"T{loserPlace}"
+                : $"{loserPlace}";
+
+            standings.AddRange(losers.Select(loser => ToStanding(loser, loserPlace, placeStr)));
+        }
+
+        return standings.OrderBy(x => x.Place).ToList();
+    }
+
+    private static FencerWithStats ToStanding(FencerBase fencer, int place, string placeStr) =>
+        new FencerWithStats(fencer, 0) { Place = place, PlaceStr = placeStr };
+
     public static string? GetWinnerName(ElimBout bout)
     {
         var id = bout.WinnerId;
