@@ -48,12 +48,11 @@
         await ElimRepo.AddElimBouts(toAdd, EventName);
 
         if (!existsNextRound)
-            _rounds.Add(existingNextRound);
-
-        foreach (var bout in toAdd)
         {
-            var pos = existingNextRound.TakeWhile(b => (b.RightPlace ?? long.MaxValue) < (bout.RightPlace ?? long.MaxValue)).Count();
-            existingNextRound.Insert(pos, bout);
+            _rounds.Add(existingNextRound);
         }
+
+        existingNextRound.AddRange(toAdd);
+        ElimService.SortNextRound(currentRound, existingNextRound);
     }
 }
