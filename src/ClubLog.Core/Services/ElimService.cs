@@ -168,11 +168,39 @@ public class ElimService : IElimService
 
     public List<List<ElimBout>> GroupIntoRounds(List<ElimBout> bouts)
     {
-        return bouts
+        var rounds = bouts
             .GroupBy(b => b.Round)
             .OrderBy(g => g.Key)
             .Select(g => g.ToList())
             .ToList();
+
+        for (var r = 1; r < rounds.Count; r++)
+        {
+            SortNextRound(rounds[r - 1], rounds[r]);
+        }
+
+        return rounds;
+    }
+
+    public void SortNextRound(List<ElimBout> currentRound, List<ElimBout> nextRound)
+    {
+        nextRound.Sort((a, b) => GetPairIndex(currentRound, a.RightPlace).CompareTo(GetPairIndex(currentRound, b.RightPlace)));
+    }
+
+    private static int GetPairIndex(List<ElimBout> round, long? rightPlace)
+    {
+        for (var i = 0; i + 1 < round.Count; i += 2)
+        {
+            var topPlace = (round[i].WinnerPlace ?? long.MaxValue) <= (round[i + 1].WinnerPlace ?? long.MaxValue)
+                ? round[i].WinnerPlace
+                : round[i + 1].WinnerPlace;
+            
+            if (topPlace == rightPlace)
+            {
+                return i / 2;
+            }
+        }
+        return int.MaxValue;
     }
 
     public List<ElimBout> GetNewNextRoundBouts(List<ElimBout> currentRound, List<ElimBout> existingNextRound)
@@ -344,6 +372,62 @@ public class ElimService : IElimService
         }
         return entries;
     }
+
+    public List<FencerWithStats> GetFinalStandings(List<List<ElimBout>> rounds)
+    {
+        var standings = new List<FencerWithStats>();
+        if (rounds.Count == 0)
+        {
+            return standings;
+        }
+
+        var finalBout = rounds.Last()[0];
+        if (finalBout.WinnerId.HasValue)
+        {
+            var winner = finalBout.WinnerId == finalBout.RightId
+                ? finalBout.Right
+                : finalBout.Left;
+            standings.Add(ToStanding(winner, 1, "1"));
+        }
+
+        for (var r = rounds.Count - 1; r >= 0; r--)
+        {
+            var round = rounds[r];
+            var loserPlace = round.Count + 1;
+            var losers = new List<FencerBase>();
+
+            foreach (var bout in round)
+            {
+                if (!bout.WinnerId.HasValue)
+                {
+                    continue;
+                }
+
+                var loserId = bout.WinnerId == bout.RightId
+                    ? bout.LeftId
+                    : bout.RightId;
+                if (loserId == Guid.Empty)
+                {
+                    continue;
+                }
+
+                losers.Add(bout.WinnerId == bout.RightId
+                    ? bout.Left
+                    : bout.Right);
+            }
+
+            var placeStr = losers.Count > 1
+                ? $"T{loserPlace}"
+                : $"{loserPlace}";
+
+            standings.AddRange(losers.Select(loser => ToStanding(loser, loserPlace, placeStr)));
+        }
+
+        return standings.OrderBy(x => x.Place).ToList();
+    }
+
+    private static FencerWithStats ToStanding(FencerBase fencer, int place, string placeStr) =>
+        new FencerWithStats(fencer, 0) { Place = place, PlaceStr = placeStr };
 
     public static string? GetWinnerName(ElimBout bout)
     {
