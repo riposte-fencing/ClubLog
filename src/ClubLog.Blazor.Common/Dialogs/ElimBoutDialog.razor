@@ -2,7 +2,7 @@
     <DialogContent>
         <div class="d-flex flex-column" style="gap: 4px;">
 
-            <div class="d-flex align-center" style="gap: 8px;">
+            <div class="d-flex align-center" style="gap: 8px;" @onkeydown="OnRightKeyDown" @onkeydown:stopPropagation="true">
                 <MudCheckBox T="bool"
                              Value="ComputedWinnerId == Bout.RightId"
                              ValueChanged="v => _manualWinnerId = v ? Bout.RightId : Guid.Empty"
@@ -10,12 +10,12 @@
                              Dense="true" Class="ma-0"/>
                 <MudText Typo="Typo.caption" Style="min-width: 20px; text-align: right; opacity: 0.6;">@Bout.RightPlace</MudText>
                 <MudText Typo="Typo.body1" Style="flex: 1;">@Bout.Right</MudText>
-                <MudNumericField T="int?" @bind-Value="_rightScore" Min="0" Style="width: 70px;" Immediate="true" HideSpinButtons="true"/>
+                <MudNumericField T="int?" @ref="_rightField" @bind-Value="_rightScore" Min="0" Style="width: 70px;" Immediate="true" HideSpinButtons="true"/>
             </div>
 
             <MudDivider/>
 
-            <div class="d-flex align-center" style="gap: 8px;">
+            <div class="d-flex align-center" style="gap: 8px;" @onkeydown="OnLeftKeyDown" @onkeydown:stopPropagation="true">
                 <MudCheckBox T="bool"
                              Value="ComputedWinnerId == Bout.LeftId"
                              ValueChanged="v => _manualWinnerId = v ? Bout.LeftId : Guid.Empty"
@@ -23,7 +23,7 @@
                              Dense="true" Class="ma-0"/>
                 <MudText Typo="Typo.caption" Style="min-width: 20px; text-align: right; opacity: 0.6;">@Bout.LeftPlace</MudText>
                 <MudText Typo="Typo.body1" Style="flex: 1;">@Bout.Left</MudText>
-                <MudNumericField T="int?" @bind-Value="_leftScore" Min="0" Style="width: 70px;" Immediate="true" HideSpinButtons="true"/>
+                <MudNumericField T="int?" @ref="_leftField" @bind-Value="_leftScore" Min="0" Style="width: 70px;" Immediate="true" HideSpinButtons="true"/>
             </div>
 
             @if (IsTied)
@@ -47,12 +47,44 @@
     private int? _leftScore;
     private Guid _manualWinnerId = Guid.Empty;
 
+    private MudNumericField<int?> _rightField = null!;
+    private MudNumericField<int?> _leftField = null!;
+
     protected override void OnInitialized()
     {
         _rightScore = Bout.RightScore;
-        _leftScore  = Bout.LeftScore;
+        _leftScore = Bout.LeftScore;
         if (IsTied)
+        {
             _manualWinnerId = Bout.WinnerId ?? Guid.Empty;
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // Hack? Without this the focus doesn't actually work. 
+            await Task.Delay(50);
+            await _rightField.FocusAsync();
+        }
+    }
+
+    private async Task OnRightKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await _leftField.FocusAsync();
+        }
+    }
+
+    private async Task OnLeftKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && CanSave)
+        {
+            await Task.Yield();
+            Save();
+        }
     }
 
     private bool IsTied => _leftScore != null && _rightScore != null && _leftScore == _rightScore;
@@ -63,7 +95,11 @@
         {
             if (_leftScore == null || _rightScore == null) return null;
             if (_leftScore != _rightScore)
-                return _leftScore > _rightScore ? Bout.LeftId : Bout.RightId;
+            {
+                return _leftScore > _rightScore
+                    ? Bout.LeftId
+                    : Bout.RightId;
+            }
             return _manualWinnerId == Guid.Empty ? null : _manualWinnerId;
         }
     }
@@ -73,11 +109,15 @@
     private void Save()
     {
         Bout.RightScore = _rightScore;
-        Bout.LeftScore  = _leftScore;
+        Bout.LeftScore = _leftScore;
         if (IsTied)
+        {
             Bout.SetWinner(_manualWinnerId);
+        }
         else
+        {
             Bout.WinnerId = null;
+        }
         MudDialog.Close(DialogResult.Ok(true));
     }
 
