@@ -30,11 +30,16 @@
                     <MudButton Variant="Variant.Filled"
                                Color="Color.Primary"
                                StartIcon="@Icons.Material.Filled.CloudUpload">
-                        Upload Files
+                        Upload Roster
                     </MudButton>
                 </ActivatorContent>
             </MudFileUpload>
         </MudItem>
+        @* <MudItem> *@
+        @*     <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="OpenFormatCustomizationDialog"> *@
+        @*         Customize Format *@
+        @*     </MudButton> *@
+        @* </MudItem> *@
         <MudItem>
             <MudButton Variant="Variant.Filled" Color="Color.Success" OnClick="OpenPoolNumberDialog">
                 Start pools
@@ -100,6 +105,11 @@
                 await AddFencer(fencer);
             }
         }
+    }
+
+    public async Task OpenFormatCustomizationDialog()
+    {
+        
     }
 
     public async Task ProcessCsv(IBrowserFile file)

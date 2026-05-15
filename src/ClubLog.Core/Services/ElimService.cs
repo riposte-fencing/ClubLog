@@ -390,11 +390,11 @@ public class ElimService : IElimService
             standings.Add(ToStanding(winner, 1, "1"));
         }
 
+        var loserPlace = 2;
         for (var r = rounds.Count - 1; r >= 0; r--)
         {
             var round = rounds[r];
-            var loserPlace = round.Count + 1;
-            var losers = new List<FencerBase>();
+            var losers = new List<(FencerBase Fencer, long? InitialSeed)>();
 
             foreach (var bout in round)
             {
@@ -403,24 +403,34 @@ public class ElimService : IElimService
                     continue;
                 }
 
-                var loserId = bout.WinnerId == bout.RightId
-                    ? bout.LeftId
-                    : bout.RightId;
+                var isRightWinner = bout.WinnerId == bout.RightId;
+                var loserId = isRightWinner ? bout.LeftId : bout.RightId;
                 if (loserId == Guid.Empty)
                 {
                     continue;
                 }
 
-                losers.Add(bout.WinnerId == bout.RightId
-                    ? bout.Left
-                    : bout.Right);
+                var loser = isRightWinner ? bout.Left : bout.Right;
+                var seed = isRightWinner ? bout.LeftPlace : bout.RightPlace;
+                losers.Add((loser, seed));
             }
 
-            var placeStr = losers.Count > 1
-                ? $"T{loserPlace}"
-                : $"{loserPlace}";
+            if (losers.Count == 2)
+            {
+                var placeStr = $"T{loserPlace}";
+                standings.AddRange(losers.Select(l => ToStanding(l.Fencer, loserPlace, placeStr)));
+            }
+            else
+            {
+                var sorted = losers.OrderBy(l => l.InitialSeed ?? long.MaxValue).ToList();
+                for (var i = 0; i < sorted.Count; i++)
+                {
+                    var pl = loserPlace + i;
+                    standings.Add(ToStanding(sorted[i].Fencer, pl, $"{pl}"));
+                }
+            }
 
-            standings.AddRange(losers.Select(loser => ToStanding(loser, loserPlace, placeStr)));
+            loserPlace += round.Count;
         }
 
         return standings.OrderBy(x => x.Place).ToList();

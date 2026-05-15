@@ -39,8 +39,8 @@
 
     private async Task TryAddNextRoundBouts(int roundIndex)
     {
-        var currentRound      = _rounds[roundIndex];
-        var existsNextRound   = _rounds.Count > roundIndex + 1;
+        var currentRound = _rounds[roundIndex];
+        var existsNextRound = _rounds.Count > roundIndex + 1;
         var existingNextRound = existsNextRound ? _rounds[roundIndex + 1] : new List<ElimBout>();
 
         var toAdd = ElimService.GetNewNextRoundBouts(currentRound, existingNextRound);
